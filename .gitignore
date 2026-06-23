@@ -1,0 +1,35 @@
+# Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+
+# Spring Boot
+*.log
+application-local.yml
+application-local.properties
+
+# Docker
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets — nunca commitar
+**/secrets.yml
+**/credentials.yml
