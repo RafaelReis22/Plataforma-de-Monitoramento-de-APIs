@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgresql:5432/monitoring_meta
+
+prometheus:
+  url: http://prometheus:9090

@@ -1,0 +1,3 @@
+monitoring:
+  proc:
+    base-path: /host/proc
