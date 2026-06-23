@@ -1,0 +1,10 @@
+spring:
+  task:
+    scheduling:
+      enabled: false
+
+monitoring:
+  collection:
+    interval-ms: 999999999
+  proc:
+    base-path: /proc

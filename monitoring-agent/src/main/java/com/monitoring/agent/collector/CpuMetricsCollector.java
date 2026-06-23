@@ -30,8 +30,7 @@ public class CpuMetricsCollector {
             SystemInfo si = new SystemInfo();
             p = si.getHardware().getProcessor();
             p.getSystemCpuLoadBetweenTicks(null); // probe
-            this.prevTicks = p.getSystemCpuLogicalCounts() > 0
-                ? p.getSystemCpuLoadTicks() : new long[0];
+            this.prevTicks = p.getSystemCpuLoadTicks();
             available = true;
             log.info("OSHI CPU collector inicializado");
         } catch (UnsatisfiedLinkError | Exception e) {
