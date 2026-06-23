@@ -1,0 +1,65 @@
+groups:
+  - name: api-monitoring-alerts
+    interval: 30s
+    rules:
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taxa de erros 5xx acima de 5%"
+          description: "Taxa atual: {{ printf \"%.2f\" $value }}%"
+
+      - alert: HighLatencyP99
+        expr: |
+          histogram_quantile(0.99,
+            rate(http_server_requests_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latência P99 acima de 2 segundos"
+          description: "P99 atual: {{ printf \"%.3f\" $value }}s em {{ $labels.uri }}"
+
+      - alert: HighCpuUsage
+        expr: |
+          monitoring_cpu_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU acima de 85%"
+          description: "CPU atual: {{ printf \"%.1f\" $value }}%"
+
+      - alert: HighMemoryUsage
+        expr: |
+          monitoring_memory_used_bytes / monitoring_memory_total_bytes > 0.90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Memória acima de 90%"
+          description: "Uso atual: {{ printf \"%.1f\" (mul $value 100) }}%"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Serviço {{ $labels.job }} está down"
+          description: "Instância {{ $labels.instance }} não está respondendo"
+
+      - alert: RedisMemoryHigh
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis usando mais de 80% da memória"
+          description: "allkeys-lru iniciará evictions em breve"

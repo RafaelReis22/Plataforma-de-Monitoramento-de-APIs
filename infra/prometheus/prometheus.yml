@@ -1,0 +1,58 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'local'
+    environment: 'development'
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']  # nome do serviço na monitoring-net
+
+scrape_configs:
+
+  # M1: monitoring-agent usa network_mode: host — Prometheus scrape em localhost:8081
+  - job_name: 'monitoring-agent'
+    static_configs:
+      - targets: ['localhost:8081']
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'monitoring-agent'
+
+  # M2: demais serviços alcançados por nome de serviço na monitoring-net
+  - job_name: 'api-interceptor'
+    static_configs:
+      - targets: ['api-interceptor:8082']
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 10s
+
+  - job_name: 'observability-pipeline'
+    static_configs:
+      - targets: ['observability-pipeline:8083']
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 10s
+
+  - job_name: 'storage-layer'
+    static_configs:
+      - targets: ['storage-layer:8084']
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 10s
+
+  - job_name: 'dashboard-service'
+    static_configs:
+      - targets: ['dashboard-service:8085']
+    metrics_path: /actuator/prometheus
+    scrape_timeout: 10s
+
+  # Auto-monitoramento do Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    metrics_path: /metrics

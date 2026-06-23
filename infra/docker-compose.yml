@@ -1,0 +1,201 @@
+version: "3.9"
+
+# Rede interna — serviços se descobrem por nome de serviço
+# monitoring-agent usa network_mode: host (M1) e NÃO pertence a esta rede
+networks:
+  monitoring-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  redis-data:
+  pg-data:
+
+services:
+
+  # ─── Infraestrutura ────────────────────────────────────────────────────────
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus
+    networks: [monitoring-net]
+    ports:
+      - "9090:9090"          # exposto ao host para UI e API PromQL
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    networks: [monitoring-net]
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    networks: [monitoring-net]
+    ports:
+      - "3000:3000"          # exposto ao host para UI
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+      GF_FEATURE_TOGGLES_ENABLE: publicDashboards
+      GF_SERVER_ROOT_URL: http://localhost:3000
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # M3 — Redis com allkeys-lru e maxmemory 256mb
+  redis:
+    image: redis:7.4-alpine
+    container_name: redis
+    networks: [monitoring-net]
+    # porta NÃO exposta externamente — apenas acessível via monitoring-net
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --loglevel warning
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  postgresql:
+    image: postgres:16.4-alpine
+    container_name: postgresql
+    networks: [monitoring-net]
+    # porta NÃO exposta externamente — apenas acessível via monitoring-net
+    environment:
+      POSTGRES_DB: monitoring_meta
+      POSTGRES_USER: monitor
+      POSTGRES_PASSWORD: monitor_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitor -d monitoring_meta"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Serviços de Aplicação ──────────────────────────────────────────────────
+
+  # M1 — monitoring-agent usa network_mode: host para enxergar interfaces físicas
+  monitoring-agent:
+    build:
+      context: ../monitoring-agent
+      dockerfile: Dockerfile
+    container_name: monitoring-agent
+    network_mode: host          # acessa /proc e interfaces de rede do host diretamente
+    # COM network_mode: host, 'ports' e 'networks' são ignorados
+    # Prometheus faz scrape em localhost:8081 (job separado no prometheus.yml)
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    volumes:
+      - /proc:/host/proc:ro   # monta /proc do host — lido via monitoring.proc.base-path
+    cap_add:
+      - SYS_PTRACE           # OSHI precisa para leitura de processos
+    restart: unless-stopped
+
+  api-interceptor:
+    build:
+      context: ../api-gateway-interceptor
+      dockerfile: Dockerfile
+    container_name: api-interceptor
+    networks: [monitoring-net]
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  observability-pipeline:
+    build:
+      context: ../observability-pipeline
+      dockerfile: Dockerfile
+    container_name: observability-pipeline
+    networks: [monitoring-net]
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  storage-layer:
+    build:
+      context: ../storage-layer
+      dockerfile: Dockerfile
+    container_name: storage-layer
+    networks: [monitoring-net]
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dashboard-service:
+    build:
+      context: ../dashboard-service
+      dockerfile: Dockerfile
+    container_name: dashboard-service
+    networks: [monitoring-net]
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
