@@ -51,14 +51,14 @@ public class NetworkMetricsCollector {
             networkIFs.forEach(NetworkIF::updateAttributes);
             return networkIFs.stream().mapToLong(NetworkIF::getBytesRecv).sum();
         }
-        return readNetDevStat(1); // column 1 = bytes received
+        return readNetDevStat(1); // coluna 1 = bytes recebidos
     }
 
     public long getTotalBytesSent() {
         if (oshiAvailable) {
             return networkIFs.stream().mapToLong(NetworkIF::getBytesSent).sum();
         }
-        return readNetDevStat(9); // column 9 = bytes sent
+        return readNetDevStat(9); // coluna 9 = bytes enviados
     }
 
     public double getReceiveRateBytesPerSec() {

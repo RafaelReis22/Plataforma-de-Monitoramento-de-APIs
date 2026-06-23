@@ -47,14 +47,14 @@ public class DiskMetricsCollector {
             diskStores.forEach(HWDiskStore::updateAttributes);
             return diskStores.stream().mapToLong(HWDiskStore::getReadBytes).sum();
         }
-        return readDiskStat(5); // /proc/diskstats column 5 = sectors read * 512
+        return readDiskStat(5); // coluna 5 do /proc/diskstats = setores lidos × 512
     }
 
     public long getTotalWriteBytes() {
         if (oshiAvailable) {
             return diskStores.stream().mapToLong(HWDiskStore::getWriteBytes).sum();
         }
-        return readDiskStat(9); // /proc/diskstats column 9 = sectors written * 512
+        return readDiskStat(9); // coluna 9 do /proc/diskstats = setores gravados × 512
     }
 
     public long getTotalDiskSpaceBytes() {
