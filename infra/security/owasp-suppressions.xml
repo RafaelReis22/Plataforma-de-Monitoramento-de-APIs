@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Supressões OWASP Dependency Check
+  Adicione entradas aqui para falsos positivos confirmados, sempre com:
+  - <notes> explicando por que é falso positivo
+  - data de expiração (expireDate) para forçar revisão periódica
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+  <!--
+    Exemplo: CVE em versão antiga do Spring já resolvido pelo BOM 3.3.4
+    <suppress until="2026-12-31Z">
+      <notes>Falso positivo: Spring Boot BOM 3.3.4 já inclui a versão corrigida</notes>
+      <cve>CVE-XXXX-XXXXX</cve>
+    </suppress>
+  -->
+
+</suppressions>
