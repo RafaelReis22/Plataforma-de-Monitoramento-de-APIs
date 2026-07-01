@@ -1,0 +1,52 @@
+# Ingress — roteamento HTTP externo para Grafana e APIs
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-monitoring-ingress
+  namespace: api-monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: monitoring.local
+      http:
+        paths:
+          - path: /grafana
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 3000
+          - path: /api/interceptor
+            pathType: Prefix
+            backend:
+              service:
+                name: api-interceptor
+                port:
+                  number: 8082
+          - path: /api/historico
+            pathType: Prefix
+            backend:
+              service:
+                name: storage-layer
+                port:
+                  number: 8084
+          - path: /api/metricas
+            pathType: Prefix
+            backend:
+              service:
+                name: observability-pipeline
+                port:
+                  number: 8083
+          - path: /prometheus
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus
+                port:
+                  number: 9090
