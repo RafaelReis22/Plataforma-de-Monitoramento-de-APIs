@@ -1,0 +1,152 @@
+{
+  "name": "API Monitoring — Relatório SLO Diário",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "cron-diario",
+      "name": "Agendamento — 08h dias úteis",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://prometheus:9090/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "(1 - sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[24h])) / sum(rate(http_server_requests_seconds_count[24h]))) * 100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "prometheus-disponibilidade",
+      "name": "Consultar Disponibilidade 24h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 200]
+    },
+    {
+      "parameters": {
+        "url": "http://prometheus:9090/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket[24h])))"
+            }
+          ]
+        }
+      },
+      "id": "prometheus-p99",
+      "name": "Consultar P99 24h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://prometheus:9090/api/v1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "sum(rate(http_server_requests_seconds_count[24h]))"
+            }
+          ]
+        }
+      },
+      "id": "prometheus-throughput",
+      "name": "Consultar Throughput 24h",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "const disp = $('Consultar Disponibilidade 24h').first().json;\nconst p99 = $('Consultar P99 24h').first().json;\nconst throughput = $('Consultar Throughput 24h').first().json;\n\nconst disponibilidade = parseFloat(disp?.data?.result?.[0]?.value?.[1] || 0);\nconst latenciaP99 = parseFloat(p99?.data?.result?.[0]?.value?.[1] || 0) * 1000;\nconst reqPorSeg = parseFloat(throughput?.data?.result?.[0]?.value?.[1] || 0);\n\nconst sloAlvo = 99.5;\nconst dentroSLO = disponibilidade >= sloAlvo;\nconst budgetRestante = ((disponibilidade - sloAlvo) / (100 - sloAlvo)) * 100;\nconst emoji = dentroSLO ? '✅' : '❌';\nconst data = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });\n\nreturn [{\n  json: {\n    data,\n    disponibilidade: disponibilidade.toFixed(3),\n    sloAlvo,\n    dentroSLO,\n    budgetRestante: Math.max(0, budgetRestante).toFixed(1),\n    latenciaP99Ms: latenciaP99.toFixed(0),\n    reqPorSeg: reqPorSeg.toFixed(1),\n    emoji,\n    mensagem: `${emoji} Disponibilidade: ${disponibilidade.toFixed(3)}% (alvo ${sloAlvo}%) | Error Budget: ${Math.max(0, budgetRestante).toFixed(1)}% | P99: ${latenciaP99.toFixed(0)}ms | ${reqPorSeg.toFixed(1)} req/s`\n  }\n}];"
+      },
+      "id": "calcular-slo",
+      "name": "Calcular Métricas SLO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "chat",
+        "operation": "post",
+        "channel": "#slo-reports",
+        "text": "📊 *Relatório SLO Diário — API Monitoring Platform*\n{{ $json.data }}\n\n{{ $json.emoji }} *Disponibilidade 24h:* `{{ $json.disponibilidade }}%` (alvo: {{ $json.sloAlvo }}%)\n📉 *Error Budget Restante:* `{{ $json.budgetRestante }}%`\n⚡ *Latência P99:* `{{ $json.latenciaP99Ms }}ms`\n📈 *Throughput médio:* `{{ $json.reqPorSeg }} req/s`\n\n{{ $json.dentroSLO ? '✅ SLO dentro do alvo — nenhuma ação necessária.' : '❌ SLO abaixo do alvo — revisar incidentes das últimas 24h.' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slack-relatorio",
+      "name": "Enviar Relatório para Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [940, 400]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "={{ $vars.GOOGLE_SHEET_SLO_ID }}", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "SLO Histórico", "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data": "={{ $json.data }}",
+            "Disponibilidade %": "={{ $json.disponibilidade }}",
+            "Dentro SLO": "={{ $json.dentroSLO ? 'Sim' : 'Não' }}",
+            "Error Budget %": "={{ $json.budgetRestante }}",
+            "P99 (ms)": "={{ $json.latenciaP99Ms }}",
+            "Throughput (req/s)": "={{ $json.reqPorSeg }}"
+          }
+        }
+      },
+      "id": "registrar-historico",
+      "name": "Registrar Histórico SLO",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1160, 400]
+    }
+  ],
+  "connections": {
+    "Agendamento — 08h dias úteis": {
+      "main": [[
+        { "node": "Consultar Disponibilidade 24h", "type": "main", "index": 0 },
+        { "node": "Consultar P99 24h", "type": "main", "index": 0 },
+        { "node": "Consultar Throughput 24h", "type": "main", "index": 0 }
+      ]]
+    },
+    "Consultar Disponibilidade 24h": { "main": [[ { "node": "Calcular Métricas SLO", "type": "main", "index": 0 } ]] },
+    "Consultar P99 24h": { "main": [[ { "node": "Calcular Métricas SLO", "type": "main", "index": 0 } ]] },
+    "Consultar Throughput 24h": { "main": [[ { "node": "Calcular Métricas SLO", "type": "main", "index": 0 } ]] },
+    "Calcular Métricas SLO": { "main": [[ { "node": "Enviar Relatório para Slack", "type": "main", "index": 0 } ]] },
+    "Enviar Relatório para Slack": { "main": [[ { "node": "Registrar Histórico SLO", "type": "main", "index": 0 } ]] }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Executa às 08h nos dias úteis. Consulta Prometheus para disponibilidade 24h, P99 e throughput. Calcula erro budget (meta 99,5%), publica relatório no Slack #slo-reports e registra histórico em Google Sheets."
+  }
+}

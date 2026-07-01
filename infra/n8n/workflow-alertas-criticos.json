@@ -1,0 +1,155 @@
+{
+  "name": "API Monitoring — Alertas Críticos",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alertmanager-webhook",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson"
+      },
+      "id": "webhook-alertmanager",
+      "name": "Receber Alerta do Alertmanager",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.status }}",
+              "rightValue": "firing",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-firing",
+      "name": "Apenas Alertas Disparando",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const alerts = $input.first().json.body.alerts || [];\nconst criticos = alerts.filter(a => a.labels?.severity === 'critical');\nconst warnings = alerts.filter(a => a.labels?.severity === 'warning');\n\nreturn [{\n  json: {\n    temCritico: criticos.length > 0,\n    criticos,\n    warnings,\n    totalAlertas: alerts.length,\n    timestamp: new Date().toISOString(),\n    resumo: `${criticos.length} crítico(s), ${warnings.length} warning(s)`\n  }\n}];"
+      },
+      "id": "classificar-alertas",
+      "name": "Classificar por Severidade",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.temCritico }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ]
+        }
+      },
+      "id": "switch-critico",
+      "name": "É Crítico?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "chat",
+        "operation": "post",
+        "channel": "#alertas-criticos",
+        "text": "🚨 *ALERTA CRÍTICO — API Monitoring Platform*\n\n{{ $json.criticos.map(a => `• *${a.labels.alertname}*: ${a.annotations?.summary || 'sem resumo'}\\n  Serviço: ${a.labels.job || 'desconhecido'}\\n  Desde: ${new Date(a.startsAt).toLocaleString('pt-BR')}`).join('\\n\\n') }}\n\nTotal de alertas disparando: {{ $json.totalAlertas }}\n_{{ $json.timestamp }}_",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slack-critico",
+      "name": "Notificar Slack — Canal Críticos",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "chat",
+        "operation": "post",
+        "channel": "#alertas-monitoring",
+        "text": "⚠️ *Warning — API Monitoring Platform*\n\n{{ $json.warnings.map(a => `• *${a.labels.alertname}*: ${a.annotations?.summary || 'sem resumo'}`).join('\\n') }}\n\n_{{ $json.timestamp }}_",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slack-warning",
+      "name": "Notificar Slack — Canal Geral",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $input.first().json;\nconst linhas = dados.criticos.map(a => ({\n  json: {\n    alertname: a.labels.alertname,\n    severidade: 'critical',\n    servico: a.labels.job || 'desconhecido',\n    inicio: a.startsAt,\n    resumo: a.annotations?.summary || '',\n    registradoEm: new Date().toISOString()\n  }\n}));\nreturn linhas;"
+      },
+      "id": "preparar-log",
+      "name": "Preparar Registro de Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": { "__rl": true, "value": "={{ $vars.GOOGLE_SHEET_ALERTAS_ID }}", "mode": "id" },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "id" },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        }
+      },
+      "id": "log-google-sheets",
+      "name": "Registrar em Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1560, 200]
+    }
+  ],
+  "connections": {
+    "Receber Alerta do Alertmanager": {
+      "main": [[ { "node": "Apenas Alertas Disparando", "type": "main", "index": 0 } ]]
+    },
+    "Apenas Alertas Disparando": {
+      "main": [[ { "node": "Classificar por Severidade", "type": "main", "index": 0 } ]]
+    },
+    "Classificar por Severidade": {
+      "main": [[ { "node": "É Crítico?", "type": "main", "index": 0 } ]]
+    },
+    "É Crítico?": {
+      "main": [
+        [ { "node": "Notificar Slack — Canal Críticos", "type": "main", "index": 0 } ],
+        [ { "node": "Notificar Slack — Canal Geral", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Notificar Slack — Canal Críticos": {
+      "main": [[ { "node": "Preparar Registro de Log", "type": "main", "index": 0 } ]]
+    },
+    "Preparar Registro de Log": {
+      "main": [[ { "node": "Registrar em Google Sheets", "type": "main", "index": 0 } ]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Recebe webhooks do Alertmanager, classifica por severidade (critical/warning), notifica canais Slack correspondentes e registra críticos em Google Sheets para rastreamento de incidentes."
+  }
+}
