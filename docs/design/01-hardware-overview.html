@@ -1,115 +1,446 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hardware Overview — Spec de Design</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
-    .topbar { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
-    .topbar h1 { font-size: 16px; font-weight: 600; color: #a78bfa; }
-    .topbar span { font-size: 12px; color: #64748b; }
-    .toolbar { background: #12151f; border-bottom: 1px solid #1e2235; padding: 8px 24px; display: flex; gap: 24px; font-size: 12px; color: #94a3b8; }
-    .toolbar select { background: #1e2235; color: #e2e8f0; border: 1px solid #2d3148; border-radius: 4px; padding: 4px 8px; font-size: 12px; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 16px 24px; }
-    .grid-full { display: grid; grid-template-columns: 1fr; gap: 12px; padding: 0 24px; }
-    .grid-half { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 24px 16px; }
-    .panel { background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; padding: 16px; }
-    .panel-title { font-size: 12px; color: #94a3b8; margin-bottom: 12px; font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase; }
-    .stat-value { font-size: 36px; font-weight: 700; }
-    .stat-value.green { color: #4ade80; }
-    .stat-value.yellow { color: #facc15; }
-    .stat-value.red { color: #f87171; }
-    .stat-value.blue { color: #60a5fa; }
-    .stat-label { font-size: 11px; color: #64748b; margin-top: 4px; }
-    .chart-area { height: 120px; background: linear-gradient(180deg, rgba(96,165,250,0.2) 0%, rgba(96,165,250,0.05) 100%); border-radius: 4px; position: relative; overflow: hidden; }
-    .chart-area svg { width: 100%; height: 100%; }
-    .gauge-bg { fill: none; stroke: #2d3148; stroke-width: 12; }
-    .gauge-fill { fill: none; stroke: #4ade80; stroke-width: 12; stroke-linecap: round; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-    .badge-green { background: rgba(74,222,128,0.15); color: #4ade80; }
-    .spec-note { margin: 8px 24px 16px; background: #1e2235; border-left: 3px solid #a78bfa; padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 12px; color: #94a3b8; }
-    .spec-note strong { color: #c4b5fd; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hardware Overview · API Monitoring</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root {
+    --bg: #080b14;
+    --surface: #0d1117;
+    --card: #111827;
+    --card-hover: #161f2e;
+    --border: #1e2a3d;
+    --border-subtle: #161e2e;
+    --text: #f1f5f9;
+    --text-muted: #64748b;
+    --text-dim: #334155;
+    --green: #10b981;
+    --green-dim: rgba(16,185,129,0.12);
+    --yellow: #f59e0b;
+    --yellow-dim: rgba(245,158,11,0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.12);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59,130,246,0.12);
+    --purple: #8b5cf6;
+    --cyan: #06b6d4;
+    --glow-green: 0 0 20px rgba(16,185,129,0.3);
+    --glow-blue: 0 0 20px rgba(59,130,246,0.3);
+  }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  
+  /* Topbar */
+  .topbar {
+    background: linear-gradient(90deg, #0d1117 0%, #0f172a 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .logo { display: flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: var(--glow-green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.2)} }
+  .logo-text { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .nav-sep { width: 1px; height: 24px; background: var(--border); }
+  .nav-link { font-size: 13px; color: var(--text-muted); padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+  .nav-link:hover { color: var(--text); background: var(--card); }
+  .nav-link.active { color: var(--green); background: var(--green-dim); }
+  .spacer { flex: 1; }
+  .badge-live { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--green-dim); border: 1px solid rgba(16,185,129,0.25); border-radius: 20px; font-size: 11px; font-weight: 600; color: var(--green); }
+  .badge-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+  .time-range { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+  .time-range select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
+
+  /* Layout */
+  .main { padding: 20px 24px; }
+  
+  /* Page header */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; }
+  .page-title span { color: var(--green); }
+  .page-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .header-actions { display: flex; gap: 8px; }
+  .btn { padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-ghost { background: var(--card); border: 1px solid var(--border); color: var(--text-muted); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--blue); }
+  .btn-primary { background: var(--blue); color: white; }
+
+  /* Stat cards */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .stat-card:hover { border-color: var(--border-subtle); background: var(--card-hover); transform: translateY(-1px); }
+  .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius:12px 12px 0 0; }
+  .stat-card.green::before { background: linear-gradient(90deg, var(--green), transparent); }
+  .stat-card.yellow::before { background: linear-gradient(90deg, var(--yellow), transparent); }
+  .stat-card.red::before { background: linear-gradient(90deg, var(--red), transparent); }
+  .stat-card.blue::before { background: linear-gradient(90deg, var(--blue), transparent); }
+  .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 12px; }
+  .stat-icon.green { background: var(--green-dim); }
+  .stat-icon.yellow { background: var(--yellow-dim); }
+  .stat-icon.red { background: var(--red-dim); }
+  .stat-icon.blue { background: var(--blue-dim); }
+  .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .stat-value { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.blue { color: var(--blue); }
+  .stat-unit { font-size: 14px; font-weight: 400; color: var(--text-muted); margin-left: 2px; }
+  .stat-delta { display: flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 11px; }
+  .delta-up { color: var(--green); }
+  .delta-down { color: var(--red); }
+  .stat-sparkline { height: 36px; margin-top: 10px; }
+
+  /* Charts row */
+  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .charts-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .panel-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .panel-badge.green { background: var(--green-dim); color: var(--green); }
+  .panel-badge.yellow { background: var(--yellow-dim); color: var(--yellow); }
+  .panel-meta { font-size: 10px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+  .chart-area { width: 100%; }
+
+  /* Progress bars */
+  .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+  .progress-fill.green { background: linear-gradient(90deg, var(--green), #34d399); }
+  .progress-fill.yellow { background: linear-gradient(90deg, var(--yellow), #fbbf24); }
+  .progress-fill.red { background: linear-gradient(90deg, var(--red), #f87171); }
+
+  /* Gauge ring */
+  .gauge-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+  .gauge-label-top { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .gauge-label-bottom { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+  
+  /* Service list */
+  .service-list { display: flex; flex-direction: column; gap: 10px; }
+  .service-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border-subtle); border-radius: 8px; }
+  .service-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .service-name { font-size: 12px; font-weight: 500; flex: 1; }
+  .service-val { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text-muted); }
+  .service-badge { font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 600; }
+
+  /* Sparkline SVG */
+  svg { display: block; }
+</style>
 </head>
 <body>
-  <div class="topbar">
-    <h1>🖥 Hardware Overview</h1>
-    <span>Tela 1 de 5 — API Monitoring Platform</span>
-    <span style="margin-left:auto;">Last 1h · Auto-refresh 15s</span>
-  </div>
-  <div class="toolbar">
-    <label>Fonte de Dados: <select><option>Prometheus</option></select></label>
-  </div>
 
-  <div class="spec-note">
-    <strong>Métricas:</strong> monitoring_cpu_usage_percent · monitoring_memory_used_bytes · monitoring_memory_total_bytes · up
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    <div class="logo-text">API Monitor</div>
   </div>
+  <div class="nav-sep"></div>
+  <div class="nav-link active">Hardware</div>
+  <div class="nav-link">API Health</div>
+  <div class="nav-link">JVM</div>
+  <div class="nav-link">SLO</div>
+  <div class="nav-link">Alertas</div>
+  <div class="spacer"></div>
+  <div class="time-range">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <select><option>Last 1h</option><option>Last 6h</option><option>Last 24h</option><option>Last 7d</option></select>
+  </div>
+  <div class="badge-live"><div class="badge-live-dot"></div>LIVE · 15s</div>
+</div>
 
-  <!-- Row 1: Stats -->
-  <div class="grid">
-    <div class="panel">
-      <div class="panel-title">CPU Atual</div>
-      <div class="stat-value yellow">42,3%</div>
-      <div class="stat-label">monitoring_cpu_usage_percent</div>
-      <div class="chart-area" style="height:50px;margin-top:8px;">
-        <svg viewBox="0 0 200 50" preserveAspectRatio="none"><polyline points="0,40 20,35 40,30 60,38 80,25 100,20 120,28 140,22 160,30 180,15 200,20" fill="none" stroke="#facc15" stroke-width="2"/></svg>
-      </div>
+<div class="main">
+  <!-- Page header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Hardware <span>Overview</span></div>
+      <div class="page-sub">Sistema · monitoring-agent · host físico · atualizado há 3s</div>
     </div>
-    <div class="panel">
-      <div class="panel-title">Memória Usada</div>
-      <div class="stat-value green">61,5%</div>
-      <div class="stat-label">memory_used / memory_total × 100</div>
-      <div class="chart-area" style="height:50px;margin-top:8px;">
-        <svg viewBox="0 0 200 50" preserveAspectRatio="none"><polyline points="0,25 30,28 60,22 90,30 120,26 150,24 180,22 200,20" fill="none" stroke="#4ade80" stroke-width="2"/></svg>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Serviços Ativos</div>
-      <div class="stat-value blue">5 / 5</div>
-      <div class="stat-label">sum(up)</div>
-      <div style="margin-top:8px;"><span class="badge badge-green">TODOS ONLINE</span></div>
+    <div class="header-actions">
+      <button class="btn btn-ghost">↓ Exportar CSV</button>
+      <button class="btn btn-primary">+ Nova Regra de Alerta</button>
     </div>
   </div>
 
-  <!-- Row 2: CPU time series -->
-  <div class="grid-full" style="margin-top:12px;">
-    <div class="panel">
-      <div class="panel-title">CPU — Uso ao Longo do Tempo</div>
-      <div class="chart-area" style="height:140px;">
-        <svg viewBox="0 0 600 140" preserveAspectRatio="none">
-          <defs><linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#60a5fa" stop-opacity="0.3"/><stop offset="100%" stop-color="#60a5fa" stop-opacity="0.02"/></linearGradient></defs>
-          <path d="M0,100 30,90 70,80 120,95 170,65 230,50 290,70 350,55 410,75 470,40 550,45 600,50 600,140 0,140Z" fill="url(#cpuGrad)"/>
-          <polyline points="0,100 30,90 70,80 120,95 170,65 230,50 290,70 350,55 410,75 470,40 550,45 600,50" fill="none" stroke="#60a5fa" stroke-width="2"/>
+  <!-- KPI Cards -->
+  <div class="stat-grid">
+    
+    <div class="stat-card yellow">
+      <div class="stat-icon yellow">⚡</div>
+      <div class="stat-label">CPU Usage</div>
+      <div class="stat-value yellow">42.3<span class="stat-unit">%</span></div>
+      <div class="stat-delta"><span class="delta-up">↑ 3.1%</span> <span style="color:var(--text-dim)">vs 15m atrás</span></div>
+      <div class="stat-sparkline">
+        <svg width="100%" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
+          <defs><linearGradient id="yg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.3"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,28 20,24 40,20 60,26 80,16 100,12 120,18 140,14 160,22 180,8 200,11 200,36 0,36Z" fill="url(#yg)"/>
+          <polyline points="0,28 20,24 40,20 60,26 80,16 100,12 120,18 140,14 160,22 180,8 200,11" fill="none" stroke="#f59e0b" stroke-width="1.5"/>
         </svg>
       </div>
     </div>
-  </div>
 
-  <!-- Row 3: Memory + Gauge -->
-  <div class="grid-half" style="margin-top:12px;">
-    <div class="panel">
-      <div class="panel-title">Memória — Usada vs Total</div>
-      <div class="chart-area" style="height:140px;">
-        <svg viewBox="0 0 400 140" preserveAspectRatio="none">
-          <polyline points="0,80 60,75 120,85 180,70 240,72 300,68 360,65 400,62" fill="none" stroke="#4ade80" stroke-width="2"/>
-          <polyline points="0,30 400,30" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3"/>
+    <div class="stat-card green">
+      <div class="stat-icon green">🧠</div>
+      <div class="stat-label">Memória Usada</div>
+      <div class="stat-value green">5.8<span class="stat-unit">GB</span></div>
+      <div class="stat-delta"><span style="color:var(--text-muted)">de 9.4 GB</span> <span class="delta-up">61.5%</span></div>
+      <div class="stat-sparkline">
+        <svg width="100%" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
+          <defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10b981" stop-opacity="0.3"/><stop offset="100%" stop-color="#10b981" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,20 30,18 60,22 90,16 120,18 150,15 180,14 200,12 200,36 0,36Z" fill="url(#gg)"/>
+          <polyline points="0,20 30,18 60,22 90,16 120,18 150,15 180,14 200,12" fill="none" stroke="#10b981" stroke-width="1.5"/>
         </svg>
       </div>
-      <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;">
-        <span style="color:#4ade80;">● Usado (5,8 GB)</span>
-        <span style="color:#94a3b8;">- - Total (9,4 GB)</span>
+    </div>
+
+    <div class="stat-card blue">
+      <div class="stat-icon blue">💾</div>
+      <div class="stat-label">Disco Raiz</div>
+      <div class="stat-value blue">34.2<span class="stat-unit">%</span></div>
+      <div class="stat-delta"><span style="color:var(--text-muted)">148 GB</span> <span style="color:var(--green)">livres</span></div>
+      <div class="stat-sparkline">
+        <svg width="100%" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
+          <polyline points="0,18 50,18 100,18 150,17 200,17" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="4,2"/>
+        </svg>
       </div>
     </div>
-    <div class="panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-      <div class="panel-title" style="align-self:flex-start;">Uso de Memória (%)</div>
-      <svg width="160" height="160" viewBox="0 0 160 160">
-        <circle class="gauge-bg" cx="80" cy="80" r="60" stroke-dasharray="250 320" stroke-dashoffset="-35"/>
-        <circle class="gauge-fill" cx="80" cy="80" r="60" stroke-dasharray="154 320" stroke-dashoffset="-35"/>
-        <text x="80" y="88" text-anchor="middle" fill="#4ade80" font-size="24" font-weight="700">61,5%</text>
+
+    <div class="stat-card green">
+      <div class="stat-icon green">🌐</div>
+      <div class="stat-label">Serviços Online</div>
+      <div class="stat-value green">5<span class="stat-unit">/5</span></div>
+      <div class="stat-delta"><span class="delta-up">Todos saudáveis</span></div>
+      <div class="stat-sparkline">
+        <svg width="100%" height="36" viewBox="0 0 200 36" preserveAspectRatio="none">
+          <polyline points="0,10 200,10" fill="none" stroke="#10b981" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    
+    <!-- CPU Time Series -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">CPU · Uso em Tempo Real</div>
+          <div class="panel-meta">monitoring_cpu_usage_percent · avg 1m</div>
+        </div>
+        <span class="panel-badge yellow">42.3%</span>
+      </div>
+      <svg class="chart-area" height="160" viewBox="0 0 700 160" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="cpuArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <!-- Grid lines -->
+        <line x1="0" y1="40" x2="700" y2="40" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <line x1="0" y1="80" x2="700" y2="80" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <line x1="0" y1="120" x2="700" y2="120" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <!-- Alert threshold line -->
+        <line x1="0" y1="28" x2="700" y2="28" stroke="#ef4444" stroke-width="1" stroke-dasharray="6,3" opacity="0.5"/>
+        <text x="704" y="32" fill="#ef4444" font-size="9" opacity="0.7">85%</text>
+        <!-- CPU area + line -->
+        <path d="M0,120 40,110 80,95 130,115 180,85 240,70 290,88 350,72 410,95 470,55 530,60 590,75 650,58 700,65 700,160 0,160Z" fill="url(#cpuArea)"/>
+        <polyline points="0,120 40,110 80,95 130,115 180,85 240,70 290,88 350,72 410,95 470,55 530,60 590,75 650,58 700,65" fill="none" stroke="#f59e0b" stroke-width="2"/>
+        <!-- Hover point (last) -->
+        <circle cx="700" cy="65" r="4" fill="#f59e0b"/>
+        <circle cx="700" cy="65" r="8" fill="#f59e0b" opacity="0.2"/>
+        <!-- Y axis labels -->
+        <text x="4" y="44" fill="#334155" font-size="9" font-family="JetBrains Mono">75%</text>
+        <text x="4" y="84" fill="#334155" font-size="9" font-family="JetBrains Mono">50%</text>
+        <text x="4" y="124" fill="#334155" font-size="9" font-family="JetBrains Mono">25%</text>
       </svg>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">
+        <span>-60m</span><span>-45m</span><span>-30m</span><span>-15m</span><span>now</span>
+      </div>
+    </div>
+
+    <!-- Gauge -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Memória — Gauge</div>
+        <span class="panel-badge green">OK</span>
+      </div>
+      <div class="gauge-wrap">
+        <div class="gauge-label-top">Utilização</div>
+        <svg width="160" height="140" viewBox="0 0 160 140">
+          <defs>
+            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#10b981"/>
+              <stop offset="70%" stop-color="#34d399"/>
+              <stop offset="100%" stop-color="#6ee7b7"/>
+            </linearGradient>
+          </defs>
+          <!-- Track -->
+          <path d="M20,110 A60,60 0 1 1 140,110" fill="none" stroke="#1e2a3d" stroke-width="12" stroke-linecap="round"/>
+          <!-- Fill (61.5% of arc ≈ 184.5° of 300° arc) -->
+          <path d="M20,110 A60,60 0 1 1 140,110" fill="none" stroke="url(#gaugeGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="192 312" />
+          <!-- Glow -->
+          <path d="M20,110 A60,60 0 1 1 140,110" fill="none" stroke="url(#gaugeGrad)" stroke-width="2" stroke-linecap="round" stroke-dasharray="192 312" opacity="0.4" filter="blur(3px)"/>
+          <!-- Center text -->
+          <text x="80" y="90" text-anchor="middle" fill="#f1f5f9" font-size="28" font-weight="800" font-family="Inter">61.5</text>
+          <text x="80" y="108" text-anchor="middle" fill="#64748b" font-size="12" font-family="Inter">%</text>
+          <!-- Min/Max labels -->
+          <text x="16" y="126" fill="#334155" font-size="9" font-family="JetBrains Mono" text-anchor="middle">0</text>
+          <text x="144" y="126" fill="#334155" font-size="9" font-family="JetBrains Mono" text-anchor="middle">100</text>
+        </svg>
+        <div style="text-align:center;">
+          <div style="font-size:13px;color:var(--green);font-weight:600;">5.8 GB usados</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">de 9.4 GB total</div>
+        </div>
+        <div class="progress-bar" style="width:100%;margin-top:14px;">
+          <div class="progress-fill green" style="width:61.5%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;width:100%;margin-top:4px;font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">
+          <span>0 GB</span><span style="color:var(--yellow)">75%</span><span>9.4 GB</span>
+        </div>
+      </div>
     </div>
   </div>
+
+  <!-- Bottom row -->
+  <div class="charts-grid-3">
+
+    <!-- Disco -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Discos</div>
+        <span class="panel-badge blue">Saudável</span>
+      </div>
+      <div class="service-list">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:500;">/ (raiz)</span>
+            <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--blue);">34.2%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill green" style="width:34.2%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">78 GB / 228 GB</div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:500;">/data</span>
+            <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--yellow);">71.8%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill yellow" style="width:71.8%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">359 GB / 500 GB</div>
+        </div>
+        <div style="margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:500;">/tmp</span>
+            <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--green);">8.4%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill green" style="width:8.4%"></div></div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">8.4 GB / 100 GB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rede -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Rede · eth0</div>
+        <span class="panel-meta">rx / tx bytes/s</span>
+      </div>
+      <svg class="chart-area" height="100" viewBox="0 0 300 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="rxGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="txGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M0,70 50,60 100,40 150,55 200,35 250,25 300,30 300,100 0,100Z" fill="url(#rxGrad)"/>
+        <polyline points="0,70 50,60 100,40 150,55 200,35 250,25 300,30" fill="none" stroke="#06b6d4" stroke-width="2"/>
+        <path d="M0,85 50,80 100,75 150,82 200,70 250,65 300,68 300,100 0,100Z" fill="url(#txGrad)"/>
+        <polyline points="0,85 50,80 100,75 150,82 200,70 250,65 300,68" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+      </svg>
+      <div style="display:flex;gap:16px;margin-top:10px;">
+        <div>
+          <div style="font-size:10px;color:#06b6d4;font-weight:600;margin-bottom:2px;">↓ RX</div>
+          <div style="font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#06b6d4;">2.4 MB/s</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#8b5cf6;font-weight:600;margin-bottom:2px;">↑ TX</div>
+          <div style="font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#8b5cf6;">0.8 MB/s</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Serviços -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Status dos Serviços</div>
+        <span class="panel-badge green">5/5 UP</span>
+      </div>
+      <div class="service-list">
+        <div class="service-row">
+          <div class="service-dot" style="background:var(--green);box-shadow:0 0 6px rgba(16,185,129,0.6)"></div>
+          <div class="service-name">monitoring-agent</div>
+          <div class="service-val">:8081</div>
+          <div class="service-badge" style="background:var(--green-dim);color:var(--green)">UP</div>
+        </div>
+        <div class="service-row">
+          <div class="service-dot" style="background:var(--green);box-shadow:0 0 6px rgba(16,185,129,0.6)"></div>
+          <div class="service-name">api-interceptor</div>
+          <div class="service-val">:8082</div>
+          <div class="service-badge" style="background:var(--green-dim);color:var(--green)">UP</div>
+        </div>
+        <div class="service-row">
+          <div class="service-dot" style="background:var(--green);box-shadow:0 0 6px rgba(16,185,129,0.6)"></div>
+          <div class="service-name">obs-pipeline</div>
+          <div class="service-val">:8083</div>
+          <div class="service-badge" style="background:var(--green-dim);color:var(--green)">UP</div>
+        </div>
+        <div class="service-row">
+          <div class="service-dot" style="background:var(--green);box-shadow:0 0 6px rgba(16,185,129,0.6)"></div>
+          <div class="service-name">storage-layer</div>
+          <div class="service-val">:8084</div>
+          <div class="service-badge" style="background:var(--green-dim);color:var(--green)">UP</div>
+        </div>
+        <div class="service-row">
+          <div class="service-dot" style="background:var(--green);box-shadow:0 0 6px rgba(16,185,129,0.6)"></div>
+          <div class="service-name">dashboard-service</div>
+          <div class="service-val">:8085</div>
+          <div class="service-badge" style="background:var(--green-dim);color:var(--green)">UP</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
 </body>
 </html>

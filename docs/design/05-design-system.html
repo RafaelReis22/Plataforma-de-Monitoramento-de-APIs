@@ -1,92 +1,419 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Design System — API Monitoring Platform</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, system-ui, sans-serif; background: #0f1117; color: #e2e8f0; padding: 24px; }
-    h1 { font-size: 20px; font-weight: 700; color: #c4b5fd; margin-bottom: 24px; }
-    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 12px; margin-top: 32px; border-bottom: 1px solid #1e2235; padding-bottom: 8px; }
-    .color-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-    .color-chip { width: 80px; }
-    .color-block { height: 56px; border-radius: 8px; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.1); }
-    .color-name { font-size: 10px; color: #94a3b8; font-weight: 600; }
-    .color-hex { font-size: 10px; color: #64748b; font-family: monospace; }
-    .type-grid { display: flex; flex-direction: column; gap: 12px; }
-    .type-row { display: flex; align-items: baseline; gap: 16px; }
-    .type-label { font-size: 11px; color: #64748b; width: 100px; }
-    .component-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
-    .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; }
-    .btn-primary { background: #7c3aed; color: white; }
-    .btn-danger { background: rgba(248,113,113,0.2); color: #f87171; border: 1px solid rgba(248,113,113,0.4); }
-    .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #2d3148; }
-    .badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
-    .panel-demo { background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; padding: 16px; max-width: 300px; }
-    .spacing-grid { display: flex; gap: 8px; align-items: flex-end; }
-    .spacing-box { background: #7c3aed; border-radius: 4px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design System · API Monitoring</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#080b14; --surface:#0d1117; --card:#111827;
+    --border:#1e2a3d; --border-subtle:#161e2e;
+    --text:#f1f5f9; --text-muted:#64748b; --text-dim:#334155;
+    --green:#10b981; --green-dim:rgba(16,185,129,0.12);
+    --yellow:#f59e0b; --yellow-dim:rgba(245,158,11,0.12);
+    --red:#ef4444; --red-dim:rgba(239,68,68,0.12);
+    --blue:#3b82f6; --blue-dim:rgba(59,130,246,0.12);
+    --purple:#8b5cf6; --purple-dim:rgba(139,92,246,0.12);
+    --orange:#fb923c; --orange-dim:rgba(251,146,60,0.12);
+    --cyan:#06b6d4; --cyan-dim:rgba(6,182,212,0.12);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  .topbar { background:linear-gradient(90deg,#0d1117,#0f172a,#0d1117); border-bottom:1px solid var(--border); padding:0 24px; height:52px; display:flex; align-items:center; gap:20px; position:sticky; top:0; z-index:100; }
+  .logo-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 12px rgba(16,185,129,0.5); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  .logo-text { font-size:14px; font-weight:700; letter-spacing:-0.02em; margin-left:8px; }
+  .nav-sep { width:1px; height:24px; background:var(--border); }
+  .nav-link { font-size:13px; color:var(--text-muted); padding:4px 10px; border-radius:6px; }
+  .nav-link.active { color:var(--purple); background:var(--purple-dim); }
+  .spacer { flex:1; }
+  .main { padding:28px 24px; max-width:1400px; }
+
+  /* Section headings */
+  .section { margin-bottom:36px; }
+  .section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:16px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+
+  /* Color swatches */
+  .swatch-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:8px; }
+  .swatch { border-radius:10px; overflow:hidden; }
+  .swatch-color { height:60px; }
+  .swatch-info { padding:8px; background:var(--card); border:1px solid var(--border); border-top:none; border-radius:0 0 10px 10px; }
+  .swatch-name { font-size:10px; font-weight:600; margin-bottom:2px; }
+  .swatch-hex { font-size:9px; font-family:'JetBrains Mono',monospace; color:var(--text-muted); }
+  .swatch-usage { font-size:9px; color:var(--text-dim); margin-top:2px; }
+
+  /* Surface colors */
+  .surface-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .surface-card { border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .surface-block { height:50px; }
+  .surface-info { padding:8px; }
+  .surface-name { font-size:10px; font-weight:600; margin-bottom:2px; }
+  .surface-hex { font-size:9px; font-family:'JetBrains Mono',monospace; color:var(--text-muted); }
+  .surface-var { font-size:9px; font-family:'JetBrains Mono',monospace; color:var(--text-dim); margin-top:2px; }
+
+  /* Typography */
+  .type-sample { display:flex; flex-direction:column; gap:14px; }
+  .type-row { display:flex; align-items:baseline; gap:20px; padding:14px 16px; background:var(--card); border:1px solid var(--border); border-radius:10px; }
+  .type-spec { font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-dim); width:180px; flex-shrink:0; }
+  .type-preview { flex:1; }
+
+  /* Spacing grid */
+  .spacing-grid { display:flex; align-items:flex-end; gap:20px; }
+  .spacing-item { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .spacing-block { background:linear-gradient(135deg,var(--blue-dim),var(--purple-dim)); border:1px solid var(--blue); border-radius:4px; width:40px; }
+  .spacing-label { font-size:9px; font-family:'JetBrains Mono',monospace; color:var(--text-muted); }
+  .spacing-px { font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--blue); font-weight:600; }
+
+  /* Component grid */
+  .component-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .component-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .component-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim); margin-bottom:14px; }
+
+  /* Buttons */
+  .btn-showcase { display:flex; flex-wrap:wrap; gap:8px; }
+  .btn { padding:7px 14px; border-radius:7px; font-size:12px; font-weight:500; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-family:'Inter',sans-serif; }
+  .btn-primary { background:var(--blue); color:white; }
+  .btn-green { background:var(--green); color:white; }
+  .btn-danger { background:var(--red); color:white; }
+  .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--text-muted); }
+  .btn-outline-green { background:transparent; border:1px solid var(--green); color:var(--green); }
+  .btn-outline-yellow { background:transparent; border:1px solid var(--yellow); color:var(--yellow); }
+  .btn-sm { padding:4px 10px; font-size:11px; border-radius:5px; }
+
+  /* Badges */
+  .badge-showcase { display:flex; flex-wrap:wrap; gap:6px; }
+  .badge { padding:3px 9px; border-radius:20px; font-size:10px; font-weight:600; }
+
+  /* Panel card example */
+  .panel-card { background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .panel-card-header { padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .panel-card-title { font-size:12px; font-weight:600; }
+  .panel-card-body { padding:14px; }
+
+  /* Icon row */
+  .icon-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:8px; }
+  .icon-item { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px; background:var(--card); border:1px solid var(--border); border-radius:8px; }
+  .icon-bg { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+  .icon-label { font-size:9px; color:var(--text-dim); text-align:center; }
+
+  /* Metrics display component */
+  .metric-display { display:flex; align-items:flex-end; gap:4px; }
+  .metric-num { font-size:32px; font-weight:800; letter-spacing:-0.03em; line-height:1; }
+  .metric-unit { font-size:14px; font-weight:400; color:var(--text-muted); margin-bottom:4px; }
+  .metric-trend { font-size:11px; margin-bottom:6px; margin-left:4px; }
+</style>
 </head>
 <body>
-  <h1>Design System — API Monitoring Platform</h1>
+<div class="topbar">
+  <div style="display:flex;align-items:center;"><div class="logo-dot"></div><div class="logo-text">API Monitor</div></div>
+  <div class="nav-sep"></div>
+  <div class="nav-link">Hardware</div>
+  <div class="nav-link">API Health</div>
+  <div class="nav-link">JVM</div>
+  <div class="nav-link">SLO</div>
+  <div class="nav-link">Alertas</div>
+  <div class="nav-sep"></div>
+  <div class="nav-link active">Design System</div>
+  <div class="spacer"></div>
+  <span style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">v1.0.0 — dark-premium</span>
+</div>
 
-  <h2>Paleta de Cores — Estado Semântico</h2>
-  <div class="color-grid">
-    <div class="color-chip"><div class="color-block" style="background:#4ade80;"></div><div class="color-name">Success</div><div class="color-hex">#4ade80</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#facc15;"></div><div class="color-name">Warning</div><div class="color-hex">#facc15</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#f87171;"></div><div class="color-name">Error</div><div class="color-hex">#f87171</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#60a5fa;"></div><div class="color-name">Info</div><div class="color-hex">#60a5fa</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#c084fc;"></div><div class="color-name">Accent</div><div class="color-hex">#c084fc</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#fb923c;"></div><div class="color-name">JVM</div><div class="color-hex">#fb923c</div></div>
-  </div>
-
-  <h2>Superfícies — Backgrounds</h2>
-  <div class="color-grid">
-    <div class="color-chip"><div class="color-block" style="background:#0f1117;border:1px solid #2d3148;"></div><div class="color-name">bg-base</div><div class="color-hex">#0f1117</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#1a1d27;"></div><div class="color-name">bg-panel</div><div class="color-hex">#1a1d27</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#12151f;"></div><div class="color-name">bg-toolbar</div><div class="color-hex">#12151f</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#1e2235;"></div><div class="color-name">bg-hover</div><div class="color-hex">#1e2235</div></div>
-    <div class="color-chip"><div class="color-block" style="background:#2d3148;"></div><div class="color-name">border</div><div class="color-hex">#2d3148</div></div>
-  </div>
-
-  <h2>Tipografia</h2>
-  <div class="type-grid">
-    <div class="type-row"><span class="type-label">Heading</span><span style="font-size:20px;font-weight:700;">Hardware Overview</span></div>
-    <div class="type-row"><span class="type-label">Subheading</span><span style="font-size:16px;font-weight:600;">CPU Atual</span></div>
-    <div class="type-row"><span class="type-label">Panel Title</span><span style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#94a3b8;">CPU — Uso ao longo do tempo</span></div>
-    <div class="type-row"><span class="type-label">Body</span><span style="font-size:13px;color:#e2e8f0;">Monitoramento de APIs com 127 req/s</span></div>
-    <div class="type-row"><span class="type-label">Caption</span><span style="font-size:11px;color:#64748b;">monitoring_cpu_usage_percent · Last 1h</span></div>
-    <div class="type-row"><span class="type-label">Mono</span><span style="font-size:12px;font-family:monospace;color:#c4b5fd;">rate(http_server_requests_seconds_count[5m])</span></div>
+<div class="main">
+  <div style="margin-bottom:28px;">
+    <div style="font-size:26px;font-weight:800;letter-spacing:-0.03em;margin-bottom:6px;">Design <span style="color:var(--purple)">System</span></div>
+    <div style="font-size:13px;color:var(--text-muted);">Tokens, componentes, tipografia e padrões visuais da plataforma API Monitoring — dark premium</div>
   </div>
 
-  <h2>Componentes</h2>
-  <div class="component-grid">
-    <button class="btn btn-primary">Aplicar filtro</button>
-    <button class="btn btn-danger">Silenciar alerta</button>
-    <button class="btn btn-ghost">Exportar JSON</button>
-  </div>
-  <div class="component-grid" style="align-items:center;margin-bottom:16px;">
-    <span class="badge" style="background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);">ONLINE</span>
-    <span class="badge" style="background:rgba(248,113,113,0.2);color:#f87171;border:1px solid rgba(248,113,113,0.3);">CRÍTICO</span>
-    <span class="badge" style="background:rgba(250,204,21,0.15);color:#facc15;border:1px solid rgba(250,204,21,0.3);">WARNING</span>
-    <span class="badge" style="background:rgba(96,165,250,0.15);color:#60a5fa;border:1px solid rgba(96,165,250,0.3);">INFO</span>
+  <!-- COLORS -->
+  <div class="section">
+    <div class="section-title">Paleta Semântica — Cores de Status</div>
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#10b981;box-shadow:0 4px 16px rgba(16,185,129,0.3)"></div>
+        <div class="swatch-info">
+          <div class="swatch-name" style="color:#10b981">Success</div>
+          <div class="swatch-hex">#10b981</div>
+          <div class="swatch-usage">OK · UP · normal</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#34d399"></div>
+        <div class="swatch-info">
+          <div class="swatch-name" style="color:#34d399">Success Light</div>
+          <div class="swatch-hex">#34d399</div>
+          <div class="swatch-usage">Gradiente · hover</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#f59e0b;box-shadow:0 4px 16px rgba(245,158,11,0.3)"></div>
+        <div class="swatch-info">
+          <div class="swatch-name" style="color:#f59e0b">Warning</div>
+          <div class="swatch-hex">#f59e0b</div>
+          <div class="swatch-usage">CPU · memória alta</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#ef4444;box-shadow:0 4px 16px rgba(239,68,68,0.3)"></div>
+        <div class="swatch-info">
+          <div class="swatch-name" style="color:#ef4444">Error</div>
+          <div class="swatch-hex">#ef4444</div>
+          <div class="swatch-usage">Critical · DOWN · 5xx</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#3b82f6;box-shadow:0 4px 16px rgba(59,130,246,0.3)"></div>
+        <div class="swatch-info">
+          <div class="swatch-name" style="color:#3b82f6">Info</div>
+          <div class="swatch-hex">#3b82f6</div>
+          <div class="swatch-usage">API · HTTP · network</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#8b5cf6;box-shadow:0 4px 16px rgba(139,92,246,0.2)"></div>
+        <div class="swatch-info">
+          <div class="swatch-name" style="color:#8b5cf6">JVM / Heap</div>
+          <div class="swatch-hex">#8b5cf6</div>
+          <div class="swatch-usage">Memória JVM</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#fb923c"></div>
+        <div class="swatch-info">
+          <div class="swatch-name" style="color:#fb923c">JVM CPU</div>
+          <div class="swatch-hex">#fb923c</div>
+          <div class="swatch-usage">CPU JVM · threads</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#06b6d4"></div>
+        <div class="swatch-info">
+          <div class="swatch-name" style="color:#06b6d4">Cyan</div>
+          <div class="swatch-hex">#06b6d4</div>
+          <div class="swatch-usage">Network · obs-pipeline</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <h2>Panel Card</h2>
-  <div class="panel-demo">
-    <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">CPU Atual</div>
-    <div style="font-size:36px;font-weight:700;color:#facc15;">42,3%</div>
-    <div style="font-size:11px;color:#64748b;margin-top:4px;">monitoring_cpu_usage_percent</div>
+  <!-- SURFACES -->
+  <div class="section">
+    <div class="section-title">Superfícies — Hierarquia de Profundidade</div>
+    <div class="surface-grid">
+      <div class="surface-card">
+        <div class="surface-block" style="background:#030508"></div>
+        <div class="surface-info">
+          <div class="surface-name">Void</div>
+          <div class="surface-hex">#030508</div>
+          <div class="surface-var">--bg-void</div>
+        </div>
+      </div>
+      <div class="surface-card">
+        <div class="surface-block" style="background:#080b14"></div>
+        <div class="surface-info">
+          <div class="surface-name">Base</div>
+          <div class="surface-hex">#080b14</div>
+          <div class="surface-var">--bg</div>
+        </div>
+      </div>
+      <div class="surface-card">
+        <div class="surface-block" style="background:#0d1117"></div>
+        <div class="surface-info">
+          <div class="surface-name">Surface</div>
+          <div class="surface-hex">#0d1117</div>
+          <div class="surface-var">--surface</div>
+        </div>
+      </div>
+      <div class="surface-card">
+        <div class="surface-block" style="background:#111827"></div>
+        <div class="surface-info">
+          <div class="surface-name">Card</div>
+          <div class="surface-hex">#111827</div>
+          <div class="surface-var">--card</div>
+        </div>
+      </div>
+      <div class="surface-card">
+        <div class="surface-block" style="background:#161f2e"></div>
+        <div class="surface-info">
+          <div class="surface-name">Card Hover</div>
+          <div class="surface-hex">#161f2e</div>
+          <div class="surface-var">--card-hover</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;">
+      <div class="surface-card">
+        <div class="surface-block" style="background:#1e2a3d;height:30px"></div>
+        <div class="surface-info">
+          <div class="surface-name">Border</div>
+          <div class="surface-hex">#1e2a3d — --border</div>
+        </div>
+      </div>
+      <div class="surface-card">
+        <div class="surface-block" style="background:#161e2e;height:30px"></div>
+        <div class="surface-info">
+          <div class="surface-name">Border Subtle</div>
+          <div class="surface-hex">#161e2e — --border-subtle</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <h2>Espaçamento (4px base)</h2>
-  <div class="spacing-grid">
-    <div><div class="spacing-box" style="width:4px;height:4px;"></div><div style="font-size:10px;color:#64748b;margin-top:4px;">4px</div></div>
-    <div><div class="spacing-box" style="width:8px;height:8px;"></div><div style="font-size:10px;color:#64748b;margin-top:4px;">8px</div></div>
-    <div><div class="spacing-box" style="width:12px;height:12px;"></div><div style="font-size:10px;color:#64748b;margin-top:4px;">12px</div></div>
-    <div><div class="spacing-box" style="width:16px;height:16px;"></div><div style="font-size:10px;color:#64748b;margin-top:4px;">16px</div></div>
-    <div><div class="spacing-box" style="width:24px;height:24px;"></div><div style="font-size:10px;color:#64748b;margin-top:4px;">24px</div></div>
-    <div><div class="spacing-box" style="width:32px;height:32px;"></div><div style="font-size:10px;color:#64748b;margin-top:4px;">32px</div></div>
+  <!-- TYPOGRAPHY -->
+  <div class="section">
+    <div class="section-title">Tipografia — Escala + Hierarquia</div>
+    <div class="type-sample">
+      <div class="type-row">
+        <div class="type-spec">Inter 800 · 26px · -0.03em<br><span style="color:var(--purple)">Heading Principal</span></div>
+        <div class="type-preview" style="font-size:26px;font-weight:800;letter-spacing:-0.03em;">API Monitoring Platform</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec">Inter 700 · 22px · -0.03em<br><span style="color:var(--blue)">Page Title</span></div>
+        <div class="type-preview" style="font-size:22px;font-weight:700;letter-spacing:-0.03em;">Hardware Overview</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec">Inter 600 · 13px<br><span style="color:var(--green)">Panel Title</span></div>
+        <div class="type-preview" style="font-size:13px;font-weight:600;">CPU · Uso em Tempo Real</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec">Inter 800 · 32px · -0.03em<br><span style="color:var(--yellow)">Metric Value</span></div>
+        <div class="type-preview"><div class="metric-display"><div class="metric-num" style="color:var(--yellow)">42.3</div><div class="metric-unit">%</div><div class="metric-trend" style="color:var(--red)">↑ 3.1%</div></div></div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec">Inter 500 · 11px · 0.05em UC<br><span style="color:var(--text-dim)">Label</span></div>
+        <div class="type-preview" style="font-size:11px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-muted);">CPU USAGE</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec">JetBrains Mono 400 · 11px<br><span style="color:var(--cyan)">PromQL / Code</span></div>
+        <div class="type-preview" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#06b6d4;">histogram_quantile(0.99, rate(http_server_requests_seconds_bucket[5m]))</div>
+      </div>
+      <div class="type-row">
+        <div class="type-spec">JetBrains Mono 500 · 12px<br><span style="color:var(--orange)">Metric Mono</span></div>
+        <div class="type-preview" style="font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:500;">234ms · 127.4 req/s · 0.02%</div>
+      </div>
+    </div>
   </div>
+
+  <!-- SPACING -->
+  <div class="section">
+    <div class="section-title">Espaçamento — Grade Base 4px</div>
+    <div class="spacing-grid">
+      <div class="spacing-item"><div class="spacing-block" style="height:4px"></div><div class="spacing-label">xs</div><div class="spacing-px">4px</div></div>
+      <div class="spacing-item"><div class="spacing-block" style="height:8px"></div><div class="spacing-label">sm</div><div class="spacing-px">8px</div></div>
+      <div class="spacing-item"><div class="spacing-block" style="height:12px"></div><div class="spacing-label">md</div><div class="spacing-px">12px</div></div>
+      <div class="spacing-item"><div class="spacing-block" style="height:16px"></div><div class="spacing-label">lg</div><div class="spacing-px">16px</div></div>
+      <div class="spacing-item"><div class="spacing-block" style="height:20px"></div><div class="spacing-label">xl</div><div class="spacing-px">20px</div></div>
+      <div class="spacing-item"><div class="spacing-block" style="height:24px"></div><div class="spacing-label">2xl</div><div class="spacing-px">24px</div></div>
+      <div class="spacing-item"><div class="spacing-block" style="height:32px"></div><div class="spacing-label">3xl</div><div class="spacing-px">32px</div></div>
+      <div class="spacing-item"><div class="spacing-block" style="height:40px"></div><div class="spacing-label">4xl</div><div class="spacing-px">40px</div></div>
+      <div class="spacing-item"><div class="spacing-block" style="height:48px"></div><div class="spacing-label">5xl</div><div class="spacing-px">48px</div></div>
+    </div>
+  </div>
+
+  <!-- COMPONENTS -->
+  <div class="section">
+    <div class="section-title">Componentes</div>
+    <div class="component-grid">
+      <!-- Buttons -->
+      <div class="component-card">
+        <div class="component-title">Botões</div>
+        <div class="btn-showcase">
+          <button class="btn btn-primary">Primário</button>
+          <button class="btn btn-green">Confirmar</button>
+          <button class="btn btn-danger">Crítico</button>
+          <button class="btn btn-ghost">Ghost</button>
+          <button class="btn btn-outline-green">Sucesso</button>
+          <button class="btn btn-outline-yellow">Aviso</button>
+          <button class="btn btn-sm btn-primary">Pequeno</button>
+        </div>
+      </div>
+      <!-- Badges -->
+      <div class="component-card">
+        <div class="component-title">Badges de Status</div>
+        <div class="badge-showcase">
+          <span class="badge" style="background:var(--green-dim);color:var(--green);border:1px solid rgba(16,185,129,0.3)">✓ NORMAL</span>
+          <span class="badge" style="background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,158,11,0.3)">⚠ WARNING</span>
+          <span class="badge" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.3)">🔴 CRÍTICO</span>
+          <span class="badge" style="background:var(--blue-dim);color:var(--blue)">INFO</span>
+          <span class="badge" style="background:var(--green-dim);color:var(--green)">UP</span>
+          <span class="badge" style="background:var(--red-dim);color:var(--red)">DOWN</span>
+          <span class="badge" style="background:var(--green-dim);color:var(--green)">● LIVE · 15s</span>
+          <span class="badge" style="background:var(--purple-dim);color:var(--purple)">P99</span>
+        </div>
+      </div>
+      <!-- Panel Card -->
+      <div class="component-card">
+        <div class="component-title">Panel Card</div>
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div class="panel-card-title">CPU Usage</div>
+            <span class="badge" style="background:var(--yellow-dim);color:var(--yellow);font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;">42.3%</span>
+          </div>
+          <div class="panel-card-body">
+            <div style="font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">monitoring_cpu_usage_percent</div>
+            <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+              <div style="width:42.3%;height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:3px;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-top:4px;">
+              <span>0%</span><span style="color:var(--yellow)">85%</span><span>100%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Icon system -->
+  <div class="section">
+    <div class="section-title">Ícones — Contextos de Domínio</div>
+    <div class="icon-grid">
+      <div class="icon-item"><div class="icon-bg" style="background:var(--yellow-dim)">⚡</div><div class="icon-label">CPU</div></div>
+      <div class="icon-item"><div class="icon-bg" style="background:var(--blue-dim)">🧠</div><div class="icon-label">Memória</div></div>
+      <div class="icon-item"><div class="icon-bg" style="background:var(--green-dim)">💾</div><div class="icon-label">Disco</div></div>
+      <div class="icon-item"><div class="icon-bg" style="background:var(--cyan-dim)">🌐</div><div class="icon-label">Rede</div></div>
+      <div class="icon-item"><div class="icon-bg" style="background:var(--orange-dim)">☕</div><div class="icon-label">JVM</div></div>
+      <div class="icon-item"><div class="icon-bg" style="background:var(--red-dim)">🚨</div><div class="icon-label">Alerta</div></div>
+      <div class="icon-item"><div class="icon-bg" style="background:var(--purple-dim)">📊</div><div class="icon-label">Métricas</div></div>
+      <div class="icon-item"><div class="icon-bg" style="background:var(--green-dim)">✓</div><div class="icon-label">SLO OK</div></div>
+    </div>
+  </div>
+
+  <!-- Border radius -->
+  <div class="section">
+    <div class="section-title">Border Radius</div>
+    <div style="display:flex;gap:16px;align-items:flex-end;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:60px;height:60px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:4px;"></div>
+        <div style="font-size:10px;color:var(--text-muted)">xs — 4px</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">badges</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:70px;height:70px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:6px;"></div>
+        <div style="font-size:10px;color:var(--text-muted)">sm — 6px</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">inputs · chips</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:80px;height:80px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:8px;"></div>
+        <div style="font-size:10px;color:var(--text-muted)">md — 8px</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">ícones · inner</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:90px;height:90px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:10px;"></div>
+        <div style="font-size:10px;color:var(--text-muted)">lg — 10px</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">surface cards</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:100px;height:100px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:12px;"></div>
+        <div style="font-size:10px;color:var(--text-muted)">xl — 12px</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">main panels</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="width:60px;height:30px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:20px;"></div>
+        <div style="font-size:10px;color:var(--text-muted)">pill</div>
+        <div style="font-size:9px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">badges live</div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

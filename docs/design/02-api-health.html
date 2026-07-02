@@ -1,100 +1,387 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>API Health — Spec de Design</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, system-ui, sans-serif; background: #0f1117; color: #e2e8f0; }
-    .topbar { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
-    .topbar h1 { font-size: 16px; font-weight: 600; color: #34d399; }
-    .topbar span { font-size: 12px; color: #64748b; }
-    .toolbar { background: #12151f; border-bottom: 1px solid #1e2235; padding: 8px 24px; display: flex; gap: 24px; font-size: 12px; color: #94a3b8; }
-    .toolbar select { background: #1e2235; color: #e2e8f0; border: 1px solid #2d3148; border-radius: 4px; padding: 4px 8px; }
-    .row4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 16px 24px 0; }
-    .row1 { padding: 12px 24px 0; }
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 24px 0; }
-    .panel { background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; padding: 16px; }
-    .panel-title { font-size: 11px; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .stat { font-size: 28px; font-weight: 700; }
-    .green { color: #4ade80; } .red { color: #f87171; } .yellow { color: #facc15; } .blue { color: #60a5fa; }
-    .chart { height: 120px; }
-    svg.chart { width: 100%; height: 120px; }
-    .spec-note { margin: 8px 24px 0; background: #1e2235; border-left: 3px solid #34d399; padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 12px; color: #94a3b8; }
-    .pie-legend { margin-top: 8px; font-size: 11px; display: flex; flex-wrap: wrap; gap: 8px; }
-    .pie-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Health · API Monitoring</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#080b14; --surface:#0d1117; --card:#111827; --card-hover:#161f2e;
+    --border:#1e2a3d; --border-subtle:#161e2e;
+    --text:#f1f5f9; --text-muted:#64748b; --text-dim:#334155;
+    --green:#10b981; --green-dim:rgba(16,185,129,0.12);
+    --yellow:#f59e0b; --yellow-dim:rgba(245,158,11,0.12);
+    --red:#ef4444; --red-dim:rgba(239,68,68,0.12);
+    --blue:#3b82f6; --blue-dim:rgba(59,130,246,0.12);
+    --purple:#8b5cf6; --purple-dim:rgba(139,92,246,0.12);
+    --cyan:#06b6d4;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  .topbar { background:linear-gradient(90deg,#0d1117,#0f172a,#0d1117); border-bottom:1px solid var(--border); padding:0 24px; height:52px; display:flex; align-items:center; gap:20px; position:sticky; top:0; z-index:100; }
+  .logo { display:flex; align-items:center; gap:8px; }
+  .logo-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 12px rgba(16,185,129,0.5); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.2)} }
+  .logo-text { font-size:14px; font-weight:700; letter-spacing:-0.02em; }
+  .nav-sep { width:1px; height:24px; background:var(--border); }
+  .nav-link { font-size:13px; color:var(--text-muted); padding:4px 10px; border-radius:6px; cursor:pointer; }
+  .nav-link.active { color:var(--blue); background:var(--blue-dim); }
+  .spacer { flex:1; }
+  .badge-live { display:flex; align-items:center; gap:6px; padding:4px 10px; background:var(--green-dim); border:1px solid rgba(16,185,129,0.25); border-radius:20px; font-size:11px; font-weight:600; color:var(--green); }
+  .badge-live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; }
+  .main { padding:20px 24px; }
+  .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
+  .page-title { font-size:22px; font-weight:700; letter-spacing:-0.03em; }
+  .page-title span { color:var(--blue); }
+  .page-sub { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .filter-bar { display:flex; gap:8px; }
+  .filter-chip { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:500; cursor:pointer; border:1px solid var(--border); color:var(--text-muted); background:var(--card); }
+  .filter-chip.active { border-color:var(--blue); color:var(--blue); background:var(--blue-dim); }
+
+  /* KPI 4-col */
+  .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+  .kpi { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; position:relative; overflow:hidden; }
+  .kpi::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+  .kpi.green::after { background:linear-gradient(90deg,var(--green),transparent); }
+  .kpi.blue::after { background:linear-gradient(90deg,var(--blue),transparent); }
+  .kpi.yellow::after { background:linear-gradient(90deg,var(--yellow),transparent); }
+  .kpi.purple::after { background:linear-gradient(90deg,var(--purple),transparent); }
+  .kpi-label { font-size:11px; color:var(--text-muted); font-weight:500; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
+  .kpi-val { font-size:32px; font-weight:800; letter-spacing:-0.03em; line-height:1; }
+  .kpi-val.green { color:var(--green); }
+  .kpi-val.blue { color:var(--blue); }
+  .kpi-val.yellow { color:var(--yellow); }
+  .kpi-val.purple { color:var(--purple); }
+  .kpi-sub { font-size:11px; color:var(--text-muted); margin-top:6px; }
+  .kpi-trend { display:flex; align-items:center; gap:4px; margin-top:8px; font-size:11px; }
+  .trend-up { color:var(--red); }
+  .trend-down { color:var(--green); }
+  .trend-neutral { color:var(--text-muted); }
+
+  /* Panel */
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .panel-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .panel-title { font-size:13px; font-weight:600; }
+  .panel-meta { font-size:10px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; }
+  .panel-badge { font-size:10px; padding:2px 8px; border-radius:10px; font-weight:600; }
+  .pb-green { background:var(--green-dim); color:var(--green); }
+  .pb-blue { background:var(--blue-dim); color:var(--blue); }
+  .pb-yellow { background:var(--yellow-dim); color:var(--yellow); }
+
+  /* Grid layouts */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid-3-1 { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
+
+  /* Legend */
+  .legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); }
+  .legend-dot { width:10px; height:3px; border-radius:2px; }
+
+  /* Latency table */
+  .lat-table { width:100%; border-collapse:collapse; }
+  .lat-table th { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; font-weight:600; padding:0 0 10px 0; text-align:left; border-bottom:1px solid var(--border); }
+  .lat-table td { font-size:12px; padding:10px 0; border-bottom:1px solid var(--border-subtle); vertical-align:middle; }
+  .lat-table tr:last-child td { border-bottom:none; }
+  .svc-name { font-weight:500; }
+  .svc-dot-lg { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+  .mono { font-family:'JetBrains Mono',monospace; }
+
+  /* Bar chart */
+  .bar-chart { display:flex; flex-direction:column; gap:12px; }
+  .bar-row { display:flex; align-items:center; gap:12px; }
+  .bar-lbl { font-size:11px; width:90px; color:var(--text-muted); text-align:right; flex-shrink:0; }
+  .bar-track { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:4px; }
+  .bar-val { font-size:11px; width:60px; font-family:'JetBrains Mono',monospace; flex-shrink:0; }
+
+  /* Pie chart */
+  .pie-wrap { display:flex; align-items:center; gap:24px; }
+  .pie-legend { display:flex; flex-direction:column; gap:10px; }
+  .pie-legend-row { display:flex; align-items:center; gap:8px; }
+  .pie-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+  .pie-lbl { font-size:12px; }
+  .pie-pct { font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:600; margin-left:auto; }
+
+  /* Threshold rule */
+  .rule-line { stroke-dasharray:6,3; opacity:0.5; }
+</style>
 </head>
 <body>
-  <div class="topbar">
-    <h1>🌐 API Health</h1>
-    <span>Tela 2 de 5 — API Monitoring Platform</span>
-    <span style="margin-left:auto;">Last 1h · Auto-refresh 15s</span>
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div><div class="logo-text">API Monitor</div></div>
+  <div class="nav-sep"></div>
+  <div class="nav-link">Hardware</div>
+  <div class="nav-link active">API Health</div>
+  <div class="nav-link">JVM</div>
+  <div class="nav-link">SLO</div>
+  <div class="nav-link">Alertas</div>
+  <div class="spacer"></div>
+  <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Last 1h
   </div>
-  <div class="toolbar">
-    <label>Fonte de Dados: <select><option>Prometheus</option></select></label>
-    <label>Serviço: <select><option>Todos</option><option>api-interceptor</option><option>storage-layer</option></select></label>
-  </div>
-  <div class="spec-note">
-    <strong>Métricas:</strong> http_server_requests_seconds_count · http_server_requests_seconds_bucket · up · status codes
-  </div>
+  <div class="badge-live"><div class="badge-live-dot"></div>LIVE · 15s</div>
+</div>
 
-  <!-- 4 stats -->
-  <div class="row4">
-    <div class="panel"><div class="panel-title">Requisições/s</div><div class="stat blue">127,4</div><div style="font-size:11px;color:#64748b;margin-top:4px;">rate 5m</div></div>
-    <div class="panel"><div class="panel-title">Taxa de Erros 5xx</div><div class="stat green">0,02%</div><div style="font-size:11px;color:#64748b;margin-top:4px;">&lt; 5% SLO</div></div>
-    <div class="panel"><div class="panel-title">Latência P99</div><div class="stat yellow">234ms</div><div style="font-size:11px;color:#64748b;margin-top:4px;">alvo &lt; 2s</div></div>
-    <div class="panel"><div class="panel-title">Serviços Online</div><div class="stat green">5 / 5</div><div style="font-size:11px;color:#64748b;margin-top:4px;">sum(up)</div></div>
-  </div>
-
-  <!-- Latency chart -->
-  <div class="row1" style="margin-top:12px;">
-    <div class="panel">
-      <div class="panel-title">Latência — P50 / P95 / P99 (últimos 60 min)</div>
-      <svg class="chart" viewBox="0 0 800 120" preserveAspectRatio="none">
-        <polyline points="0,100 100,95 200,90 300,88 400,92 500,85 600,80 700,82 800,78" fill="none" stroke="#4ade80" stroke-width="2"/>
-        <polyline points="0,80 100,75 200,68 300,72 400,65 500,60 600,55 700,58 800,52" fill="none" stroke="#facc15" stroke-width="2"/>
-        <polyline points="0,60 100,50 200,45 300,55 400,42 500,38 600,35 700,40 800,30" fill="none" stroke="#f87171" stroke-width="2"/>
-      </svg>
-      <div style="display:flex;gap:20px;margin-top:8px;font-size:11px;">
-        <span style="color:#4ade80;">● P50 (~45ms)</span>
-        <span style="color:#facc15;">● P95 (~140ms)</span>
-        <span style="color:#f87171;">● P99 (~234ms)</span>
-      </div>
+<div class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">API <span>Health</span></div>
+      <div class="page-sub">5 serviços · spring boot 3.3.4 · scrape 15s · job=~".*"</div>
+    </div>
+    <div class="filter-bar">
+      <div class="filter-chip active">Todos os jobs</div>
+      <div class="filter-chip">api-interceptor</div>
+      <div class="filter-chip">storage-layer</div>
+      <div class="filter-chip">dashboard-service</div>
     </div>
   </div>
 
-  <!-- Throughput + Pie -->
-  <div class="row2" style="margin-top:12px;padding-bottom:16px;">
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi green">
+      <div class="kpi-label">Throughput</div>
+      <div class="kpi-val green">127.4</div>
+      <div class="kpi-sub">req/s — todos os serviços</div>
+      <div class="kpi-trend"><span class="trend-up">↑ 12.3%</span>&nbsp;<span class="trend-neutral">vs 15m atrás</span></div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Latência P99</div>
+      <div class="kpi-val blue">234<span style="font-size:16px;color:var(--text-muted)">ms</span></div>
+      <div class="kpi-sub">histograma 5m — todos</div>
+      <div class="kpi-trend"><span class="trend-down">↓ 18ms</span>&nbsp;<span class="trend-neutral">melhorou</span></div>
+    </div>
+    <div class="kpi yellow">
+      <div class="kpi-label">Taxa de Erros 5xx</div>
+      <div class="kpi-val yellow">0.02<span style="font-size:16px;color:var(--text-muted)">%</span></div>
+      <div class="kpi-sub">2.5 err/min de 12.740 req</div>
+      <div class="kpi-trend"><span class="trend-neutral">→ estável</span></div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Serviços Online</div>
+      <div class="kpi-val green">5<span style="font-size:20px;color:var(--text-muted)">/5</span></div>
+      <div class="kpi-sub">up{job=~".*"} == 1</div>
+      <div class="kpi-trend"><span class="trend-neutral">Todos saudáveis</span></div>
+    </div>
+  </div>
+
+  <!-- Latency timeseries + pie -->
+  <div class="grid-3-1">
     <div class="panel">
-      <div class="panel-title">Throughput por Serviço (req/s)</div>
-      <svg class="chart" viewBox="0 0 400 120" preserveAspectRatio="none">
-        <polyline points="0,60 60,55 120,58 180,50 240,52 300,45 360,40 400,38" fill="none" stroke="#60a5fa" stroke-width="2"/>
-        <polyline points="0,90 60,85 120,88 180,80 240,82 300,78 360,75 400,72" fill="none" stroke="#a78bfa" stroke-width="2"/>
+      <div class="panel-hdr">
+        <div>
+          <div class="panel-title">Latência P50 / P95 / P99 — 5 min janela deslizante</div>
+          <div class="panel-meta">histogram_quantile(0.{50,95,99}, rate(http_server_requests_seconds_bucket[5m]))</div>
+        </div>
+        <span class="panel-badge pb-blue">P99: 234ms</span>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>P50 — mediana</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>P95</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>P99</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#334155;border:1px dashed #ef4444"></div>SLO 300ms</div>
+      </div>
+      <svg width="100%" height="160" viewBox="0 0 680 160" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="p99a" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#ef4444" stop-opacity="0.02"/>
+          </linearGradient>
+          <linearGradient id="p50a" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#10b981" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <!-- Grid -->
+        <line x1="0" y1="40" x2="680" y2="40" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <line x1="0" y1="80" x2="680" y2="80" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <line x1="0" y1="120" x2="680" y2="120" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <!-- SLO line at 300ms = y≈20 of 0-400ms range -->
+        <line x1="0" y1="52" x2="680" y2="52" stroke="#ef4444" stroke-width="1" class="rule-line"/>
+        <text x="686" y="56" fill="#ef4444" font-size="9" opacity="0.7">300ms</text>
+        <!-- P99 area + line -->
+        <path d="M0,80 60,75 130,70 200,85 270,65 340,55 410,60 480,50 550,45 620,40 680,38 680,160 0,160Z" fill="url(#p99a)"/>
+        <polyline points="0,80 60,75 130,70 200,85 270,65 340,55 410,60 480,50 550,45 620,40 680,38" fill="none" stroke="#ef4444" stroke-width="2"/>
+        <!-- P95 line -->
+        <polyline points="0,100 60,98 130,95 200,102 270,90 340,82 410,86 480,78 550,72 620,65 680,62" fill="none" stroke="#f59e0b" stroke-width="2"/>
+        <!-- P50 area + line -->
+        <path d="M0,128 60,125 130,122 200,130 270,118 340,112 410,116 480,108 550,104 620,100 680,98 680,160 0,160Z" fill="url(#p50a)"/>
+        <polyline points="0,128 60,125 130,122 200,130 270,118 340,112 410,116 480,108 550,104 620,100 680,98" fill="none" stroke="#10b981" stroke-width="2"/>
+        <!-- Last point glow P99 -->
+        <circle cx="680" cy="38" r="4" fill="#ef4444"/>
+        <circle cx="680" cy="38" r="8" fill="#ef4444" opacity="0.2"/>
+        <!-- Y labels -->
+        <text x="4" y="44" fill="#334155" font-size="9" font-family="JetBrains Mono">300ms</text>
+        <text x="4" y="84" fill="#334155" font-size="9" font-family="JetBrains Mono">200ms</text>
+        <text x="4" y="124" fill="#334155" font-size="9" font-family="JetBrains Mono">100ms</text>
       </svg>
-      <div style="font-size:11px;display:flex;gap:16px;margin-top:8px;">
-        <span style="color:#60a5fa;">● api-interceptor</span>
-        <span style="color:#a78bfa;">● storage-layer</span>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">
+        <span>-60m</span><span>-45m</span><span>-30m</span><span>-15m</span><span>now</span>
       </div>
     </div>
+
+    <!-- Pie chart by status -->
     <div class="panel">
-      <div class="panel-title">Distribuição por Status HTTP</div>
-      <div style="display:flex;align-items:center;gap:16px;">
-        <svg width="100" height="100" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#4ade80" stroke-width="24" stroke-dasharray="220 251"/>
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#facc15" stroke-width="24" stroke-dasharray="20 251" stroke-dashoffset="-220"/>
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#f87171" stroke-width="24" stroke-dasharray="5 251" stroke-dashoffset="-240"/>
-          <circle cx="50" cy="50" r="40" fill="none" stroke="#60a5fa" stroke-width="24" stroke-dasharray="6 251" stroke-dashoffset="-245"/>
-          <text x="50" y="54" text-anchor="middle" fill="#e2e8f0" font-size="10">2,8k</text>
+      <div class="panel-hdr">
+        <div class="panel-title">Distribuição por Status HTTP</div>
+        <span class="panel-badge pb-green">127.4 req/s</span>
+      </div>
+      <div class="pie-wrap" style="flex-direction:column;align-items:center;">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <!-- 2xx: 97.5% ≈ 351° -->
+          <!-- 4xx: 2.5% = 9° -->
+          <!-- 5xx: 0.02% ≈ 0.07° – shown as minimal arc for visibility -->
+          <circle cx="70" cy="70" r="50" fill="none" stroke="#0d1117" stroke-width="22"/>
+          <!-- 2xx -->
+          <circle cx="70" cy="70" r="50" fill="none" stroke="#10b981" stroke-width="22"
+            stroke-dasharray="307 7" stroke-dashoffset="78.5"
+            transform="rotate(-90 70 70)"/>
+          <!-- 4xx -->
+          <circle cx="70" cy="70" r="50" fill="none" stroke="#f59e0b" stroke-width="22"
+            stroke-dasharray="15.7 298.3" stroke-dashoffset="-228.5"
+            transform="rotate(-90 70 70)"/>
+          <!-- 5xx -->
+          <circle cx="70" cy="70" r="50" fill="none" stroke="#ef4444" stroke-width="22"
+            stroke-dasharray="2 311.6" stroke-dashoffset="-244"
+            transform="rotate(-90 70 70)"/>
+          <!-- Center label -->
+          <text x="70" y="66" text-anchor="middle" fill="#f1f5f9" font-size="20" font-weight="800" font-family="Inter">127</text>
+          <text x="70" y="82" text-anchor="middle" fill="#64748b" font-size="10" font-family="Inter">req/s</text>
         </svg>
-        <div class="pie-legend">
-          <div><span class="pie-dot" style="background:#4ade80;"></span>200 OK (88%)</div>
-          <div><span class="pie-dot" style="background:#facc15;"></span>404 (8%)</div>
-          <div><span class="pie-dot" style="background:#f87171;"></span>500 (0,2%)</div>
-          <div><span class="pie-dot" style="background:#60a5fa;"></span>201/204 (3,8%)</div>
+        <div class="pie-legend" style="width:100%;margin-top:16px;">
+          <div class="pie-legend-row">
+            <div class="pie-dot" style="background:#10b981"></div>
+            <span class="pie-lbl">2xx Success</span>
+            <span class="pie-pct" style="color:var(--green)">97.5%</span>
+          </div>
+          <div class="pie-legend-row">
+            <div class="pie-dot" style="background:#f59e0b"></div>
+            <span class="pie-lbl">4xx Client</span>
+            <span class="pie-pct" style="color:var(--yellow)">2.48%</span>
+          </div>
+          <div class="pie-legend-row">
+            <div class="pie-dot" style="background:#ef4444"></div>
+            <span class="pie-lbl">5xx Server</span>
+            <span class="pie-pct" style="color:var(--red)">0.02%</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Bottom: throughput + latency by service -->
+  <div class="grid-2">
+    <!-- Throughput by service bars -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Throughput por Serviço (req/s)</div>
+        <span class="panel-meta">rate(http_server_requests_seconds_count[5m])</span>
+      </div>
+      <svg width="100%" height="140" viewBox="0 0 600 140" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="barG1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient>
+          <linearGradient id="barG2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient>
+          <linearGradient id="barG3" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient>
+          <linearGradient id="barG4" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/></linearGradient>
+          <linearGradient id="barG5" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#fbbf24"/></linearGradient>
+        </defs>
+        <!-- Grid vertical -->
+        <line x1="200" y1="0" x2="200" y2="140" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <line x1="400" y1="0" x2="400" y2="140" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <line x1="600" y1="0" x2="600" y2="140" stroke="#1e2a3d" stroke-width="0.5" stroke-dasharray="4,4"/>
+        <!-- Labels x -->
+        <text x="200" y="135" fill="#334155" font-size="9" font-family="JetBrains Mono" text-anchor="middle">25</text>
+        <text x="400" y="135" fill="#334155" font-size="9" font-family="JetBrains Mono" text-anchor="middle">50</text>
+        <text x="600" y="135" fill="#334155" font-size="9" font-family="JetBrains Mono" text-anchor="middle">75 req/s</text>
+        <!-- Bars: max=75, bar area y 10→125, height=115 -->
+        <!-- api-interceptor: 42.1 → 42.1/75*500=280.7 -->
+        <text x="4" y="28" fill="#64748b" font-size="11" dominant-baseline="middle">api-interceptor</text>
+        <rect x="4" y="14" width="336" height="12" rx="6" fill="url(#barG1)"/>
+        <text x="346" y="21" fill="#3b82f6" font-size="10" font-family="JetBrains Mono" dominant-baseline="middle">42.1</text>
+        <!-- storage-layer: 31.4 -->
+        <text x="4" y="52" fill="#64748b" font-size="11" dominant-baseline="middle">storage-layer</text>
+        <rect x="4" y="38" width="251" height="12" rx="6" fill="url(#barG2)"/>
+        <text x="261" y="45" fill="#8b5cf6" font-size="10" font-family="JetBrains Mono" dominant-baseline="middle">31.4</text>
+        <!-- obs-pipeline: 22.7 -->
+        <text x="4" y="76" fill="#64748b" font-size="11" dominant-baseline="middle">obs-pipeline</text>
+        <rect x="4" y="62" width="181" height="12" rx="6" fill="url(#barG3)"/>
+        <text x="191" y="69" fill="#06b6d4" font-size="10" font-family="JetBrains Mono" dominant-baseline="middle">22.7</text>
+        <!-- dashboard-service: 18.3 -->
+        <text x="4" y="100" fill="#64748b" font-size="11" dominant-baseline="middle">dashboard-svc</text>
+        <rect x="4" y="86" width="146" height="12" rx="6" fill="url(#barG4)"/>
+        <text x="156" y="93" fill="#10b981" font-size="10" font-family="JetBrains Mono" dominant-baseline="middle">18.3</text>
+        <!-- monitoring-agent: 12.9 -->
+        <text x="4" y="124" fill="#64748b" font-size="11" dominant-baseline="middle">monitoring-agent</text>
+        <rect x="4" y="110" width="103" height="12" rx="6" fill="url(#barG5)"/>
+        <text x="113" y="117" fill="#f59e0b" font-size="10" font-family="JetBrains Mono" dominant-baseline="middle">12.9</text>
+      </svg>
+    </div>
+
+    <!-- Latency by service table -->
+    <div class="panel">
+      <div class="panel-hdr">
+        <div class="panel-title">Latência por Serviço</div>
+        <span class="panel-badge pb-blue">histograma 5m</span>
+      </div>
+      <table class="lat-table">
+        <thead>
+          <tr>
+            <th>Serviço</th>
+            <th class="mono" style="text-align:right">P50</th>
+            <th class="mono" style="text-align:right">P95</th>
+            <th class="mono" style="text-align:right">P99</th>
+            <th style="text-align:right">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="svc-dot-lg" style="background:#3b82f6"></span><span class="svc-name">api-interceptor</span></td>
+            <td class="mono" style="text-align:right;color:var(--green)">48ms</td>
+            <td class="mono" style="text-align:right;color:var(--yellow)">142ms</td>
+            <td class="mono" style="text-align:right;color:var(--red)">234ms</td>
+            <td style="text-align:right"><span style="font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;background:var(--green-dim);color:var(--green)">OK</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-dot-lg" style="background:#8b5cf6"></span><span class="svc-name">storage-layer</span></td>
+            <td class="mono" style="text-align:right;color:var(--green)">62ms</td>
+            <td class="mono" style="text-align:right;color:var(--yellow)">198ms</td>
+            <td class="mono" style="text-align:right;color:var(--red)">287ms</td>
+            <td style="text-align:right"><span style="font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;background:var(--yellow-dim);color:var(--yellow)">WARN</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-dot-lg" style="background:#06b6d4"></span><span class="svc-name">obs-pipeline</span></td>
+            <td class="mono" style="text-align:right;color:var(--green)">31ms</td>
+            <td class="mono" style="text-align:right;color:var(--green)">94ms</td>
+            <td class="mono" style="text-align:right;color:var(--yellow)">158ms</td>
+            <td style="text-align:right"><span style="font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;background:var(--green-dim);color:var(--green)">OK</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-dot-lg" style="background:#10b981"></span><span class="svc-name">dashboard-svc</span></td>
+            <td class="mono" style="text-align:right;color:var(--green)">22ms</td>
+            <td class="mono" style="text-align:right;color:var(--green)">71ms</td>
+            <td class="mono" style="text-align:right;color:var(--green)">119ms</td>
+            <td style="text-align:right"><span style="font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;background:var(--green-dim);color:var(--green)">OK</span></td>
+          </tr>
+          <tr>
+            <td><span class="svc-dot-lg" style="background:#f59e0b"></span><span class="svc-name">monitoring-agent</span></td>
+            <td class="mono" style="text-align:right;color:var(--green)">18ms</td>
+            <td class="mono" style="text-align:right;color:var(--green)">54ms</td>
+            <td class="mono" style="text-align:right;color:var(--green)">92ms</td>
+            <td style="text-align:right"><span style="font-size:10px;padding:2px 7px;border-radius:8px;font-weight:600;background:var(--green-dim);color:var(--green)">OK</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">SLO target: P99 ≤ 300ms</div>
+        <div style="display:flex;gap:8px;">
+          <div style="font-size:11px;color:var(--green);">✓ 4/5 dentro do SLO</div>
+          <div style="font-size:11px;color:var(--yellow);">⚠ storage-layer: 287ms (93% do limite)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -1,91 +1,321 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Alertas — Spec de Design</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, system-ui, sans-serif; background: #0f1117; color: #e2e8f0; }
-    .topbar { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
-    .topbar h1 { font-size: 16px; font-weight: 600; color: #f87171; }
-    .content { padding: 16px 24px; }
-    .alert-card { background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
-    .alert-header { padding: 12px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #2d3148; }
-    .alert-body { padding: 12px 16px; font-size: 12px; color: #94a3b8; }
-    .badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
-    .badge-critical { background: rgba(248,113,113,0.2); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
-    .badge-warning { background: rgba(250,204,21,0.15); color: #facc15; border: 1px solid rgba(250,204,21,0.3); }
-    .badge-ok { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
-    .alert-name { font-weight: 600; font-size: 14px; }
-    .timeline { width: 100%; height: 6px; background: #2d3148; border-radius: 3px; margin-top: 8px; overflow: hidden; }
-    .timeline-fill { height: 100%; border-radius: 3px; }
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .stat-mini { text-align: center; }
-    .stat-mini .num { font-size: 32px; font-weight: 700; }
-    .spec-note { background: #1e2235; border-left: 3px solid #f87171; padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 12px; color: #94a3b8; margin-bottom: 12px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alertas · API Monitoring</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#080b14; --surface:#0d1117; --card:#111827; --card-hover:#161f2e;
+    --border:#1e2a3d; --border-subtle:#161e2e;
+    --text:#f1f5f9; --text-muted:#64748b; --text-dim:#334155;
+    --green:#10b981; --green-dim:rgba(16,185,129,0.12);
+    --yellow:#f59e0b; --yellow-dim:rgba(245,158,11,0.12);
+    --red:#ef4444; --red-dim:rgba(239,68,68,0.15);
+    --blue:#3b82f6; --blue-dim:rgba(59,130,246,0.12);
+    --purple:#8b5cf6;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  .topbar { background:linear-gradient(90deg,#0d1117,#0f172a,#0d1117); border-bottom:1px solid var(--border); padding:0 24px; height:52px; display:flex; align-items:center; gap:20px; position:sticky; top:0; z-index:100; }
+  .logo-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 12px rgba(16,185,129,0.5); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.2)} }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .logo-text { font-size:14px; font-weight:700; letter-spacing:-0.02em; margin-left:8px; }
+  .nav-sep { width:1px; height:24px; background:var(--border); }
+  .nav-link { font-size:13px; color:var(--text-muted); padding:4px 10px; border-radius:6px; cursor:pointer; }
+  .nav-link.active { color:var(--red); background:var(--red-dim); }
+  .spacer { flex:1; }
+  .badge-live { display:flex; align-items:center; gap:6px; padding:4px 10px; background:var(--green-dim); border:1px solid rgba(16,185,129,0.25); border-radius:20px; font-size:11px; font-weight:600; color:var(--green); }
+  .badge-live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 1.5s infinite; }
+  .main { padding:20px 24px; }
+  .page-title { font-size:22px; font-weight:700; letter-spacing:-0.03em; margin-bottom:4px; }
+  .page-title span { color:var(--red); }
+  .page-sub { font-size:12px; color:var(--text-muted); margin-bottom:20px; }
+
+  /* Summary stats */
+  .summary-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+  .summary-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; display:flex; align-items:center; gap:16px; }
+  .summary-card.firing { border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.05); }
+  .summary-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .summary-icon.red { background:var(--red-dim); }
+  .summary-icon.yellow { background:var(--yellow-dim); }
+  .summary-icon.green { background:var(--green-dim); }
+  .summary-icon.blue { background:var(--blue-dim); }
+  .summary-text {}
+  .summary-num { font-size:28px; font-weight:800; letter-spacing:-0.03em; line-height:1; }
+  .summary-lbl { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+  /* Tabs */
+  .tabs { display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:0; }
+  .tab { padding:8px 16px; font-size:13px; font-weight:500; color:var(--text-muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .tab.active { color:var(--red); border-bottom-color:var(--red); }
+  .tab-badge { display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; font-size:10px; font-weight:700; margin-left:6px; }
+  .tab-badge.red { background:var(--red); color:white; animation:blink 2s infinite; }
+  .tab-badge.yellow { background:var(--yellow); color:#000; }
+  .tab-badge.green { background:var(--green); color:white; }
+  .tab-badge.gray { background:var(--border); color:var(--text-muted); }
+
+  /* Alert cards */
+  .alert-list { display:flex; flex-direction:column; gap:12px; }
+  .alert-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; position:relative; overflow:hidden; transition:all 0.2s; }
+  .alert-card:hover { background:var(--card-hover); }
+  .alert-card.critical { border-left:4px solid var(--red); border-color:rgba(239,68,68,0.35); }
+  .alert-card.warning { border-left:4px solid var(--yellow); border-color:rgba(245,158,11,0.35); }
+  .alert-card.normal { border-left:4px solid var(--green); border-color:rgba(16,185,129,0.35); }
+  .alert-header { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .alert-badge { padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:0.06em; }
+  .alert-badge.DISPARANDO { background:var(--red-dim); color:var(--red); border:1px solid rgba(239,68,68,0.3); animation:blink 2s infinite; }
+  .alert-badge.WARNING { background:var(--yellow-dim); color:var(--yellow); border:1px solid rgba(245,158,11,0.3); }
+  .alert-badge.NORMAL { background:var(--green-dim); color:var(--green); border:1px solid rgba(16,185,129,0.3); }
+  .alert-name { font-size:15px; font-weight:700; flex:1; }
+  .alert-time { font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; }
+  .alert-body { display:grid; grid-template-columns:1fr auto; gap:20px; align-items:start; }
+  .alert-detail {}
+  .alert-expr { font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text-dim); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 10px; margin-bottom:10px; word-break:break-all; }
+  .alert-labels { display:flex; gap:6px; flex-wrap:wrap; }
+  .label-chip { padding:2px 8px; border-radius:6px; font-size:10px; font-weight:500; background:var(--border-subtle); color:var(--text-muted); font-family:'JetBrains Mono',monospace; }
+  .alert-metric { text-align:right; }
+  .alert-metric-val { font-size:28px; font-weight:800; letter-spacing:-0.03em; }
+  .alert-metric-val.red { color:var(--red); }
+  .alert-metric-val.yellow { color:var(--yellow); }
+  .alert-metric-val.green { color:var(--green); }
+  .alert-threshold { font-size:10px; color:var(--text-muted); margin-top:2px; }
+
+  /* Duration bar */
+  .duration-wrap { margin-top:12px; }
+  .duration-label { display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); margin-bottom:4px; }
+  .duration-bar { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .duration-fill { height:100%; border-radius:2px; }
+  .duration-fill.red { background:linear-gradient(90deg,var(--red),#f87171); }
+  .duration-fill.yellow { background:linear-gradient(90deg,var(--yellow),#fbbf24); }
+  .duration-fill.green { background:linear-gradient(90deg,var(--green),#34d399); }
+
+  /* Timeline */
+  .timeline { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+  .timeline-row { display:flex; align-items:center; gap:12px; }
+  .tl-time { font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text-dim); width:50px; text-align:right; flex-shrink:0; }
+  .tl-line { display:flex; flex-direction:column; align-items:center; gap:0; }
+  .tl-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .tl-connector { width:2px; height:20px; background:var(--border); }
+  .tl-content { font-size:12px; }
+  .tl-content strong { font-weight:600; }
+</style>
 </head>
 <body>
-  <div class="topbar">
-    <h1>🚨 Alertas</h1>
-    <span>Tela 4 de 5 — API Monitoring Platform</span>
-    <span style="margin-left:auto;">Alertmanager · Auto-refresh 30s</span>
-  </div>
-  <div class="content">
-    <div class="spec-note"><strong>Regras de alerta:</strong> HighErrorRate (critical) · HighLatencyP99 (warning) · HighCpuUsage (warning) · HighMemoryUsage (critical) · ServiceDown (critical) · RedisMemoryHigh (warning)</div>
+<div class="topbar">
+  <div style="display:flex;align-items:center;"><div class="logo-dot"></div><div class="logo-text">API Monitor</div></div>
+  <div class="nav-sep"></div>
+  <div class="nav-link">Hardware</div>
+  <div class="nav-link">API Health</div>
+  <div class="nav-link">JVM</div>
+  <div class="nav-link">SLO</div>
+  <div class="nav-link active">Alertas</div>
+  <div class="spacer"></div>
+  <div class="badge-live"><div class="badge-live-dot"></div>LIVE · 15s</div>
+</div>
 
-    <!-- Stats de resumo -->
-    <div class="row2">
-      <div class="alert-card" style="padding:16px;">
-        <div class="stat-mini"><div class="num" style="color:#f87171;">0</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Alertas Críticos</div></div>
-      </div>
-      <div class="alert-card" style="padding:16px;">
-        <div class="stat-mini"><div class="num" style="color:#facc15;">1</div><div style="font-size:12px;color:#94a3b8;margin-top:4px;">Alertas Warning</div></div>
+<div class="main">
+  <div class="page-title">Central de <span>Alertas</span></div>
+  <div class="page-sub">AlertManager · regras de alerta ativas · integração Slack + n8n</div>
+
+  <!-- Summary -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="summary-icon red">🔴</div>
+      <div class="summary-text">
+        <div class="summary-num" style="color:var(--red)">0</div>
+        <div class="summary-lbl">Críticos Disparando</div>
       </div>
     </div>
-
-    <!-- Alert cards -->
-    <div class="alert-card">
-      <div class="alert-header">
-        <span class="badge badge-ok">NORMAL</span>
-        <span class="alert-name">HighErrorRate</span>
-        <span style="margin-left:auto;font-size:11px;color:#64748b;">há 2h 14m</span>
+    <div class="summary-card firing">
+      <div class="summary-icon yellow" style="position:relative;">
+        ⚠
+        <div style="position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:var(--yellow);animation:blink 1.5s infinite;"></div>
       </div>
-      <div class="alert-body">
-        Taxa de erros 5xx: 0,02% (limite: 5%) — 5 min para disparar
-        <div class="timeline" style="margin-top:8px;"><div class="timeline-fill" style="width:0%;background:#4ade80;"></div></div>
+      <div class="summary-text">
+        <div class="summary-num" style="color:var(--yellow)">1</div>
+        <div class="summary-lbl">Warnings Disparando</div>
       </div>
     </div>
-
-    <div class="alert-card">
-      <div class="alert-header">
-        <span class="badge badge-warning">DISPARANDO</span>
-        <span class="alert-name">HighCpuUsage</span>
-        <span style="margin-left:auto;font-size:11px;color:#64748b;">há 3m</span>
-      </div>
-      <div class="alert-body">
-        CPU: 87,4% (limite: 85%) — api-interceptor · 5 min para silenciar
-        <div class="timeline" style="margin-top:8px;"><div class="timeline-fill" style="width:60%;background:#facc15;"></div></div>
+    <div class="summary-card">
+      <div class="summary-icon green">✓</div>
+      <div class="summary-text">
+        <div class="summary-num" style="color:var(--green)">7</div>
+        <div class="summary-lbl">Regras Normais</div>
       </div>
     </div>
-
-    <div class="alert-card">
-      <div class="alert-header">
-        <span class="badge badge-ok">NORMAL</span>
-        <span class="alert-name">HighMemoryUsage</span>
-        <span style="margin-left:auto;font-size:11px;color:#64748b;">sempre normal</span>
+    <div class="summary-card">
+      <div class="summary-icon blue">📊</div>
+      <div class="summary-text">
+        <div class="summary-num" style="color:var(--blue)">8</div>
+        <div class="summary-lbl">Total de Regras</div>
       </div>
-      <div class="alert-body">Memória: 61,5% (limite: 90%)</div>
-    </div>
-
-    <div class="alert-card">
-      <div class="alert-header">
-        <span class="badge badge-ok">NORMAL</span>
-        <span class="alert-name">ServiceDown</span>
-        <span style="margin-left:auto;font-size:11px;color:#64748b;">todos online</span>
-      </div>
-      <div class="alert-body">5/5 serviços respondendo · up = 1 em todos</div>
     </div>
   </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active">Todos <span class="tab-badge yellow">1</span></div>
+    <div class="tab">Disparando <span class="tab-badge yellow">1</span></div>
+    <div class="tab">Normais <span class="tab-badge green">7</span></div>
+    <div class="tab">Silenciados <span class="tab-badge gray">0</span></div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert-list">
+
+    <!-- FIRING: HighCpuUsage -->
+    <div class="alert-card warning">
+      <div class="alert-header">
+        <span class="alert-badge WARNING">⚠ DISPARANDO</span>
+        <div class="alert-name">HighCpuUsage</div>
+        <div class="alert-time">há 7m 34s</div>
+        <button style="padding:5px 12px;background:var(--yellow-dim);border:1px solid rgba(245,158,11,0.3);color:var(--yellow);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Silenciar</button>
+      </div>
+      <div class="alert-body">
+        <div class="alert-detail">
+          <div class="alert-expr">monitoring_cpu_usage_percent > 80</div>
+          <div class="alert-labels">
+            <span class="label-chip">severity=warning</span>
+            <span class="label-chip">job=monitoring-agent</span>
+            <span class="label-chip">instance=monitoring-agent</span>
+            <span class="label-chip">for=5m</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:10px;">
+            CPU do host acima de 80% por mais de 5 minutos. Investigar processo <span style="font-family:'JetBrains Mono',monospace;color:var(--yellow);">java (PID 1234)</span> — maior consumidor.
+          </div>
+        </div>
+        <div class="alert-metric">
+          <div class="alert-metric-val yellow">87.4<span style="font-size:16px;font-weight:400;color:var(--text-muted)">%</span></div>
+          <div class="alert-threshold">threshold: &gt; 80%</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">+7.4% acima</div>
+        </div>
+      </div>
+      <div class="duration-wrap">
+        <div class="duration-label"><span>Início 14:22:18</span><span>Agora 14:29:52</span><span>+7m34s</span></div>
+        <div class="duration-bar"><div class="duration-fill yellow" style="width:100%"></div></div>
+      </div>
+    </div>
+
+    <!-- NORMAL: HighErrorRate -->
+    <div class="alert-card normal">
+      <div class="alert-header">
+        <span class="alert-badge NORMAL">✓ NORMAL</span>
+        <div class="alert-name">HighErrorRate</div>
+        <div class="alert-time">ok há 2h 14m</div>
+      </div>
+      <div class="alert-body">
+        <div class="alert-detail">
+          <div class="alert-expr">sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m])) * 100 > 5</div>
+          <div class="alert-labels">
+            <span class="label-chip">severity=critical</span>
+            <span class="label-chip">for=2m</span>
+          </div>
+        </div>
+        <div class="alert-metric">
+          <div class="alert-metric-val green">0.02<span style="font-size:14px;font-weight:400;color:var(--text-muted)">%</span></div>
+          <div class="alert-threshold">threshold: &gt; 5%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NORMAL: HighP99Latency -->
+    <div class="alert-card normal">
+      <div class="alert-header">
+        <span class="alert-badge NORMAL">✓ NORMAL</span>
+        <div class="alert-name">HighP99Latency</div>
+        <div class="alert-time">ok há 4h 02m</div>
+      </div>
+      <div class="alert-body">
+        <div class="alert-detail">
+          <div class="alert-expr">histogram_quantile(0.99, rate(http_server_requests_seconds_bucket[5m])) * 1000 > 300</div>
+          <div class="alert-labels">
+            <span class="label-chip">severity=critical</span>
+            <span class="label-chip">for=5m</span>
+          </div>
+        </div>
+        <div class="alert-metric">
+          <div class="alert-metric-val green">234<span style="font-size:14px;font-weight:400;color:var(--text-muted)">ms</span></div>
+          <div class="alert-threshold">threshold: &gt; 300ms</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NORMAL: ServiceDown -->
+    <div class="alert-card normal">
+      <div class="alert-header">
+        <span class="alert-badge NORMAL">✓ NORMAL</span>
+        <div class="alert-name">ServiceDown</div>
+        <div class="alert-time">nunca disparou</div>
+      </div>
+      <div class="alert-body">
+        <div class="alert-detail">
+          <div class="alert-expr">up == 0</div>
+          <div class="alert-labels">
+            <span class="label-chip">severity=critical</span>
+            <span class="label-chip">for=1m</span>
+            <span class="label-chip">notify=pagerduty</span>
+          </div>
+        </div>
+        <div class="alert-metric">
+          <div class="alert-metric-val green">5<span style="font-size:14px;font-weight:400;color:var(--text-muted)">/5 UP</span></div>
+          <div class="alert-threshold">threshold: up == 0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NORMAL: HighJvmHeap -->
+    <div class="alert-card normal">
+      <div class="alert-header">
+        <span class="alert-badge NORMAL">✓ NORMAL</span>
+        <div class="alert-name">HighJvmHeapUsage</div>
+        <div class="alert-time">ok há 12h 41m</div>
+      </div>
+      <div class="alert-body">
+        <div class="alert-detail">
+          <div class="alert-expr">jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} * 100 > 85</div>
+          <div class="alert-labels">
+            <span class="label-chip">severity=warning</span>
+            <span class="label-chip">for=10m</span>
+          </div>
+        </div>
+        <div class="alert-metric">
+          <div class="alert-metric-val green">27<span style="font-size:14px;font-weight:400;color:var(--text-muted)">%</span></div>
+          <div class="alert-threshold">threshold: &gt; 85%</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Timeline de hoje -->
+  <div style="margin-top:24px;">
+    <div style="font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text);">Histórico de Hoje</div>
+    <div class="timeline">
+      <div class="timeline-row">
+        <div class="tl-time">14:22</div>
+        <div class="tl-line"><div class="tl-dot" style="background:var(--yellow)"></div><div class="tl-connector"></div></div>
+        <div class="tl-content"><strong style="color:var(--yellow)">HighCpuUsage disparou</strong> — CPU atingiu 87.4% — notificação enviada ao Slack #alertas</div>
+      </div>
+      <div class="timeline-row">
+        <div class="tl-time">12:18</div>
+        <div class="tl-line"><div class="tl-dot" style="background:var(--green)"></div><div class="tl-connector"></div></div>
+        <div class="tl-content"><strong style="color:var(--green)">HighP99Latency resolveu</strong> — latência P99 voltou para 234ms (abaixo de 300ms)</div>
+      </div>
+      <div class="timeline-row">
+        <div class="tl-time">08:15</div>
+        <div class="tl-line"><div class="tl-dot" style="background:var(--red)"></div><div class="tl-connector"></div></div>
+        <div class="tl-content"><strong style="color:var(--red)">HighP99Latency disparou</strong> — deploy de storage-layer causou aumento de latência</div>
+      </div>
+      <div class="timeline-row">
+        <div class="tl-time">08:02</div>
+        <div class="tl-line"><div class="tl-dot" style="background:var(--blue)"></div></div>
+        <div class="tl-content"><strong style="color:var(--blue)">Deploy detectado</strong> — storage-layer v1.4.2 — observabilidade iniciada</div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
