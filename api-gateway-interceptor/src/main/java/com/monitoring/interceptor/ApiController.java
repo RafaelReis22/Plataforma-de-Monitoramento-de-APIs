@@ -31,7 +31,7 @@ public class ApiController {
     }
 
     @GetMapping("/usuarios/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> buscarUsuario(@PathVariable int id) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> buscarUsuario(@PathVariable("id") int id) {
         return USUARIOS.stream()
             .filter(u -> u.get("id").equals(id))
             .findFirst()

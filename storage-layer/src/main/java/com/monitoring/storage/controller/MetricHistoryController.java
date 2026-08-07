@@ -32,7 +32,7 @@ public class MetricHistoryController {
 
     // GET /api/historico/{nome} — retorna histórico completo de uma métrica
     @GetMapping("/{nome}")
-    public ResponseEntity<?> buscarPorNome(@PathVariable String nome) {
+    public ResponseEntity<?> buscarPorNome(@PathVariable("nome") String nome) {
         try {
             List<MetricRecord> registros = storageService.buscarPorNome(nome);
             return ResponseEntity.ok(registros);
@@ -45,16 +45,16 @@ public class MetricHistoryController {
     // GET /api/historico/{nome}/intervalo?inicio=...&fim=... — histórico por período
     @GetMapping("/{nome}/intervalo")
     public ResponseEntity<List<MetricRecord>> buscarPorIntervalo(
-            @PathVariable String nome,
-            @RequestParam Instant inicio,
-            @RequestParam Instant fim) {
+            @PathVariable("nome") String nome,
+            @RequestParam("inicio") Instant inicio,
+            @RequestParam("fim") Instant fim) {
         List<MetricRecord> registros = storageService.buscarPorIntervalo(nome, inicio, fim);
         return ResponseEntity.ok(registros);
     }
 
     // GET /api/historico/registro/{id} — busca um registro específico pelo ID
     @GetMapping("/registro/{id}")
-    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<?> buscarPorId(@PathVariable("id") Long id) {
         try {
             return ResponseEntity.ok(storageService.buscarPorId(id));
         } catch (MetricNaoEncontradaException ex) {
@@ -66,7 +66,7 @@ public class MetricHistoryController {
     // GET /api/historico/prometheus?query={promql} — consulta Prometheus PromQL
     @GetMapping("/prometheus")
     public ResponseEntity<List<PrometheusResultado>> consultarPrometheus(
-            @RequestParam String query) {
+            @RequestParam("query") String query) {
         List<PrometheusResultado> resultados = storageService.consultarPrometheus(query);
         return ResponseEntity.ok(resultados);
     }
@@ -74,9 +74,9 @@ public class MetricHistoryController {
     // GET /api/historico/prometheus/range?query=...&inicio=...&fim=... — série temporal PromQL
     @GetMapping("/prometheus/range")
     public ResponseEntity<List<PrometheusResultado>> consultarPrometheusRange(
-            @RequestParam String query,
-            @RequestParam Instant inicio,
-            @RequestParam Instant fim) {
+            @RequestParam("query") String query,
+            @RequestParam("inicio") Instant inicio,
+            @RequestParam("fim") Instant fim) {
         List<PrometheusResultado> resultados = storageService.consultarPrometheusIntervalo(query, inicio, fim);
         return ResponseEntity.ok(resultados);
     }

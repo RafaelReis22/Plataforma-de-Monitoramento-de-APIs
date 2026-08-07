@@ -21,7 +21,7 @@ public class MetricsController {
     /** Ingere um novo snapshot bruto. */
     @PostMapping("/raw")
     public ResponseEntity<Map<String, String>> ingerirSnapshot(
-            @RequestParam String chave,
+            @RequestParam("chave") String chave,
             @RequestBody MetricSnapshot snapshot) {
         pipelineService.armazenarSnapshot(chave, snapshot);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -30,7 +30,7 @@ public class MetricsController {
 
     /** Recupera um snapshot bruto pelo nome da chave. */
     @GetMapping("/raw/{chave}")
-    public ResponseEntity<MetricSnapshot> obterSnapshot(@PathVariable String chave) {
+    public ResponseEntity<MetricSnapshot> obterSnapshot(@PathVariable("chave") String chave) {
         MetricSnapshot snapshot = pipelineService.obterSnapshot(chave);
         if (snapshot == null) {
             return ResponseEntity.notFound().build();
