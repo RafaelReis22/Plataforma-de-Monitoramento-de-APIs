@@ -1,6 +1,5 @@
 package com.monitoring.storage.client;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -14,16 +13,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-// Cliente HTTP para a API de consulta do Prometheus (PromQL)
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class PrometheusQueryClient {
 
     private final RestTemplate restTemplate;
+    private final String prometheusUrl;
 
-    @Value("${prometheus.url:http://localhost:9090}")
-    private String prometheusUrl;
+    public PrometheusQueryClient(RestTemplate restTemplate,
+                                 @Value("${prometheus.url:http://localhost:9090}") String prometheusUrl) {
+        this.restTemplate = restTemplate;
+        this.prometheusUrl = prometheusUrl;
+    }
 
     // Consulta instantânea — retorna o valor atual de uma expressão PromQL
     @SuppressWarnings("unchecked")
