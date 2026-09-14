@@ -1,0 +1,42 @@
+replicaCount: 2
+
+image:
+  repository: monitoring-platform/dashboard-service
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+service:
+  type: ClusterIP
+  port: 8085
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: monitoring.enterprise.internal
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 75
+
+postgresql:
+  enabled: true
+  database: monitoring_meta
+  user: monitoring
+
+redis:
+  enabled: true
+  architecture: standalone
