@@ -23,6 +23,25 @@ public class HttpMetricsInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
                              Object handler) {
         request.setAttribute(START_TIME_ATTR, System.nanoTime());
+
+        // Trace Context W3C propagation & MDC logging context
+        String traceParent = request.getHeader("traceparent");
+        String traceId;
+        String spanId = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+
+        if (traceParent != null && traceParent.startsWith("00-")) {
+            String[] parts = traceParent.split("-");
+            traceId = parts.length > 1 ? parts[1] : java.util.UUID.randomUUID().toString().replace("-", "");
+        } else {
+            traceId = java.util.UUID.randomUUID().toString().replace("-", "");
+            traceParent = String.format("00-%s-%s-01", traceId, spanId);
+        }
+
+        org.slf4j.MDC.put("traceId", traceId);
+        org.slf4j.MDC.put("spanId", spanId);
+        response.setHeader("traceparent", traceParent);
+        response.setHeader("X-Trace-ID", traceId);
+
         return true;
     }
 
@@ -61,6 +80,8 @@ public class HttpMetricsInterceptor implements HandlerInterceptor {
                 "status", status
             ).increment();
         }
+
+        org.slf4j.MDC.clear();
     }
 
     private String sanitizeUri(String uri) {

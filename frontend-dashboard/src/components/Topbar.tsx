@@ -7,6 +7,7 @@ import {
   Key, 
   Radio, 
   Layers, 
+  GitBranch,
   RefreshCw, 
   User, 
   Lock, 
@@ -90,6 +91,13 @@ export const Topbar: React.FC<TopbarProps> = ({
           onClick={() => setActiveTab('api-keys')}
         >
           <Key size={15} /> API Keys & SDKs
+        </button>
+
+        <button
+          className={`nav-tab ${activeTab === 'traces' ? 'active' : ''}`}
+          onClick={() => setActiveTab('traces')}
+        >
+          <GitBranch size={15} /> Traces & Logs
         </button>
 
         <button

@@ -7,6 +7,7 @@ import { JvmView } from './views/JvmView';
 import { AlertsView } from './views/AlertsView';
 import { SyntheticView } from './views/SyntheticView';
 import { ApiKeysView } from './views/ApiKeysView';
+import { TracesLogsView } from './views/TracesLogsView';
 import { DesignSystemView } from './views/DesignSystemView';
 import { HardwareMetrics, ApiHealthMetrics, JvmMetrics, UserProfile } from './types/telemetry';
 
@@ -83,6 +84,7 @@ export function App() {
         {activeTab === 'alerts' && <AlertsView data={alertsData} />}
         {activeTab === 'synthetic' && <SyntheticView data={syntheticData} />}
         {activeTab === 'api-keys' && <ApiKeysView />}
+        {activeTab === 'traces' && <TracesLogsView />}
         {activeTab === 'design-system' && <DesignSystemView />}
       </main>
 

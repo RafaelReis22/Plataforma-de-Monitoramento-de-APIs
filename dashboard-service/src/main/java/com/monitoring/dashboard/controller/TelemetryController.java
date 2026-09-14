@@ -155,4 +155,35 @@ public class TelemetryController {
         response.put("probes", probes);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/traces")
+    public ResponseEntity<Map<String, Object>> getTraces(@RequestParam(value = "traceId", required = false) String traceId) {
+        String targetTraceId = (traceId != null && !traceId.isEmpty()) ? traceId : "4c9b809a128e45f9a012345678abcdef";
+        
+        List<Map<String, Object>> spans = List.of(
+                Map.of("spanId", "span-001", "service", "api-gateway-interceptor", "name", "HTTP GET /api/v1/orders", "durationMs", 42, "statusCode", "OK"),
+                Map.of("spanId", "span-002", "service", "observability-pipeline", "name", "Redis Cache Ingestion", "durationMs", 12, "statusCode", "OK"),
+                Map.of("spanId", "span-003", "service", "storage-layer", "name", "PostgreSQL Query SELECT", "durationMs", 18, "statusCode", "OK")
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "traceId", targetTraceId,
+                "totalDurationMs", 72,
+                "servicesCount", 3,
+                "spans", spans
+        ));
+    }
+
+    @GetMapping("/logs")
+    public ResponseEntity<List<Map<String, Object>>> getCorrelatedLogs(@RequestParam(value = "traceId", required = false) String traceId) {
+        String targetTraceId = (traceId != null && !traceId.isEmpty()) ? traceId : "4c9b809a128e45f9a012345678abcdef";
+
+        List<Map<String, Object>> logs = List.of(
+                Map.of("timestamp", "2026-09-14 16:15:02.120", "level", "INFO", "service", "api-gateway-interceptor", "traceId", targetTraceId, "message", "Recebida requisição HTTP GET /api/v1/orders"),
+                Map.of("timestamp", "2026-09-14 16:15:02.132", "level", "INFO", "service", "observability-pipeline", "traceId", targetTraceId, "message", "Agregando métricas no Redis L2 Cache"),
+                Map.of("timestamp", "2026-09-14 16:15:02.150", "level", "INFO", "service", "storage-layer", "traceId", targetTraceId, "message", "Consulta SQL executada em 18ms no PostgreSQL")
+        );
+
+        return ResponseEntity.ok(logs);
+    }
 }
