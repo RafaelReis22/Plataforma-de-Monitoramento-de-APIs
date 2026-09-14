@@ -17,6 +17,7 @@ import java.util.Map;
 public class MetricsController {
 
     private final PipelineService pipelineService;
+    private final com.monitoring.pipeline.service.StreamEventPublisher eventPublisher;
 
     /** Ingere um novo snapshot bruto. */
     @PostMapping("/raw")
@@ -24,8 +25,17 @@ public class MetricsController {
             @RequestParam("chave") String chave,
             @RequestBody MetricSnapshot snapshot) {
         pipelineService.armazenarSnapshot(chave, snapshot);
+        eventPublisher.publicarEvento(snapshot);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("mensagem", "Snapshot armazenado", "chave", chave));
+                .body(Map.of("mensagem", "Snapshot armazenado e publicado no Redis Stream", "chave", chave));
+    }
+
+    /** Ingestão em lote (batch) de alta velocidade. */
+    @PostMapping("/batch")
+    public ResponseEntity<Map<String, Object>> ingerirLote(@RequestBody List<MetricSnapshot> snapshots) {
+        int processados = eventPublisher.publicarLote(snapshots);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("mensagem", "Lote de métricas aceito para processamento em streaming", "quantidade", processados));
     }
 
     /** Recupera um snapshot bruto pelo nome da chave. */
@@ -44,12 +54,14 @@ public class MetricsController {
         return ResponseEntity.ok(pipelineService.listarAgregados());
     }
 
-    /** Endpoint de saúde do pipeline. */
+    /** Endpoint de saúde e status do pipeline de streaming. */
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
         return ResponseEntity.ok(Map.of(
                 "status", "UP",
-                "servico", "observability-pipeline"
+                "servico", "observability-pipeline",
+                "stream", com.monitoring.pipeline.service.StreamEventPublisher.STREAM_KEY,
+                "resilience4j", "ENABLED"
         ));
     }
 }
