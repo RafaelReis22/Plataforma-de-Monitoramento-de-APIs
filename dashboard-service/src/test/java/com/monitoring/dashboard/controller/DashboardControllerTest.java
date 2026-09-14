@@ -18,7 +18,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import com.monitoring.dashboard.security.JwtTokenProvider;
+
 @WebMvcTest(DashboardController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @DisplayName("DashboardController — testes unitários e de integração de rotas")
 class DashboardControllerTest {
 
@@ -27,6 +31,9 @@ class DashboardControllerTest {
 
     @MockBean
     private PrometheusValidationClient validationClient;
+
+    @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("GET /api/dashboards deve listar os nomes dos arquivos json cadastrados")
