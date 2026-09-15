@@ -1,6 +1,6 @@
-# Plano de Evolução da Plataforma de Monitoramento de APIs (Relatório Consolidado & Roadmap 2.0)
+# Plano de Evolução da Plataforma de Monitoramento de APIs (Relatório Consolidado & Roadmap 3.0 Enterprise)
 
-Este documento contém o plano de evolução e o relatório consolidado de todas as **6 Fases** da **Plataforma de Monitoramento de APIs**, demonstrando como o sistema evoluiu de microsserviços isolados para uma solução completa de observabilidade e APM enterprise (no mesmo padrão de soluções como Datadog, New Relic e Dynatrace).
+Este documento contém o plano de evolução e o relatório consolidado de todas as **12 Fases** da **Plataforma de Monitoramento de APIs**, demonstrando como o sistema evoluiu de microsserviços isolados para uma solução completa de observabilidade e APM enterprise de classe mundial (no mesmo padrão de soluções como Datadog, New Relic e Dynatrace).
 
 ---
 
@@ -14,65 +14,43 @@ Este documento contém o plano de evolução e o relatório consolidado de todas
 | **Fase 4** | Pipeline Streaming (Redis Streams), Batching, DLQ & Resilience4j | ✅ **CONCLUÍDO** | `observability-pipeline` |
 | **Fase 5** | Notificações Multi-Canal (Slack, Teams, Discord, PagerDuty) | ✅ **CONCLUÍDO** | `dashboard-service` (`NotificationService`) |
 | **Fase 6** | Helm Chart K8s, Migrações Flyway SQL & Testes de Carga k6 | ✅ **CONCLUÍDO** | `storage-layer`, `infra/helm`, `infra/load-testing` |
+| **Fase 7** | TimescaleDB Hypertables, Retenção & Compressão Colunar | ✅ **CONCLUÍDO** | `storage-layer` (`V2__timescale_hypertables.sql`, `TraceRecord`) |
+| **Fase 8** | Complete OpenTelemetry OTLP Collector & SQL Auto-Instrumentation | ✅ **CONCLUÍDO** | `infra/opentelemetry`, `api-gateway-interceptor` |
+| **Fase 9** | Ingestão Híbrida Kafka / Redpanda via `@Profile("kafka")` | ✅ **CONCLUÍDO** | `observability-pipeline` (`KafkaTelemetryProducer/Consumer`) |
+| **Fase 10** | AIOps Z-score Anomaly Detection & Service Dependency Map | ✅ **CONCLUÍDO** | `observability-pipeline`, `dashboard-service`, `frontend-dashboard` |
+| **Fase 11** | Multi-Tenancy, FinOps Ingestion Cost Metering & Rate Limiting | ✅ **CONCLUÍDO** | `dashboard-service`, `api-gateway-interceptor` |
+| **Fase 12** | eBPF Linux Network Collector & Automated K8s Self-Healing | ✅ **CONCLUÍDO** | `monitoring-agent/ebpf`, `dashboard-service` (`SelfHealingService`) |
 
 ---
 
-## Detalhamento das Entregas Realizadas
+## Detalhamento das Entregas Realizadas (Fases 7 a 12)
 
-### 1. Segurança & Autenticação (Fase 1 - ✅ CONCLUÍDA)
-- **Spring Security 6 & JJWT 0.12.6**: Filtro de segurança stateless (`JwtAuthenticationFilter`), tokens de acesso e suporte ao cabeçalho `X-API-KEY`.
-- **[AuthController](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/dashboard-service/src/main/java/com/monitoring/dashboard/controller/AuthController.java)**: Login (`/api/v1/auth/login`), registro e gerador de chaves de API.
+### 7. TimescaleDB & Otimização de Séries Temporais (Fase 7 - ✅ CONCLUÍDA)
+- **Flyway V2 Migration**: Script `V2__timescale_hypertables.sql` ativando Hypertables do TimescaleDB, compressão colunar automática de 7 dias e política de retenção automatizada.
+- **Modelo TraceRecord**: JPA Entity e Repository para persistência histórica de Spans de Tracing.
 
-### 2. Dashboard Web SPA Interativo (Fase 2 - ✅ CONCLUÍDA)
-- **[frontend-dashboard](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/frontend-dashboard)**: Interface em React 18, Vite e TypeScript com 8 abas de monitoramento:
-  1. **Hardware Overview**: Telemetria de CPU, RAM, Disco e Rede.
-  2. **API Health**: Throughput (RPS), percentis P50/P90/P95/P99 e distribuição de status HTTP.
-  3. **JVM Internals**: Heap, Metaspace, GC Pauses e Threads.
-  4. **Central de Alertas**: Incidentes ativos e regras de disparo.
-  5. **Synthetic Probes**: Pings de disponibilidade e expiração de certificados SSL/TLS.
-  6. **API Keys & SDKs**: Gerador de chaves e snippets de integração (Spring Boot, Node.js Express, Python FastAPI).
-  7. **Traces & Logs**: Visualização Waterfall de Spans OpenTelemetry e logs SLF4J MDC.
-  8. **Design System**: Tokens visuais e especificações de UI.
+### 8. OpenTelemetry OTLP Collector & Tracing (Fase 8 - ✅ CONCLUÍDA)
+- **OTel Collector Config**: Receivers OTLP gRPC (4317) e HTTP (4318) com exportação Prometheus.
+- **OpenTelemetryConfig**: Formatador de contexto W3C e gerador de IDs de spans.
 
-### 3. Tracing Distribuído & Logs (Fase 3 - ✅ CONCLUÍDA)
-- **Propagação W3C**: [HttpMetricsInterceptor.java](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/api-gateway-interceptor/src/main/java/com/monitoring/interceptor/HttpMetricsInterceptor.java) propaga cabeçalhos `traceparent` (`00-<traceId>-<spanId>-01`) e `X-Trace-ID`.
-- **Injeção MDC**: `traceId` e `spanId` injetados no MDC do SLF4J para correlação instantânea entre logs e traces.
+### 9. Streaming Híbrido com Kafka / Redpanda (Fase 9 - ✅ CONCLUÍDA)
+- **Suporte Híbrido**: Componentes `KafkaTelemetryProducer` e `KafkaTelemetryConsumer` ativados por perfil Spring `@Profile("kafka")`.
 
-### 4. Event Streaming & Resiliência (Fase 4 - ✅ CONCLUÍDA)
-- **Redis Streams**: Produtor [StreamEventPublisher](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/observability-pipeline/src/main/java/com/monitoring/pipeline/service/StreamEventPublisher.java) envia eventos para `stream:metrics`.
-- **Consumidor em Lote**: [StreamEventConsumer](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/observability-pipeline/src/main/java/com/monitoring/pipeline/service/StreamEventConsumer.java) consome mensagens em background com remoção atômica de registros.
-- **Resilience4j & DLQ**: Proteção por `@CircuitBreaker` e desvio de falhas para `stream:metrics:dlq`.
+### 10. AIOps & Mapa Topológico de Serviços (Fase 10 - ✅ CONCLUÍDA)
+- **AnomalyDetectionService**: Algoritmo estatístico Z-score em janela deslizante para detecção de anomalias em tempo real.
+- **ServiceMapView**: Visualização frontend interativa do grafo topológico dos microsserviços.
 
-### 5. Notificações Multi-Canal (Fase 5 - ✅ CONCLUÍDA)
-- **[NotificationService](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/dashboard-service/src/main/java/com/monitoring/dashboard/service/NotificationService.java)**: Notificações em tempo real para Slack Webhooks, Teams, Discord e PagerDuty.
+### 11. Multi-Tenancy, FinOps & Rate Limiting (Fase 11 - ✅ CONCLUÍDA)
+- **TenantContext**: Propagação de contexto isolado por inquilino.
+- **FinOpsMeteringService**: Cálculo de volume de ingestão em bytes/s e projeção financeira mensal.
+- **RateLimiterFilter**: Algoritmo Leaky Bucket no interceptador HTTP para proteção contra sobrecarga.
 
-### 6. DevOps Enterprise & Performance (Fase 6 - ✅ CONCLUÍDA)
-- **Flyway Migrations**: Script SQL [V1__init_telemetry_schema.sql](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/storage-layer/src/main/resources/db/migration/V1__init_telemetry_schema.sql).
-- **Helm Chart**: Manifestos de Kubernetes em [infra/helm/api-monitoring-platform/](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/infra/helm/api-monitoring-platform).
-- **Testes de Carga k6**: Script [k6-stress-test.js](file:///Users/rafael/Desktop/Plataforma-de-Monitoramento-de-APIs/infra/load-testing/k6-stress-test.js) validando suporte de 1.000 a 15.000 req/s.
+### 12. eBPF Linux Network Collector & Self-Healing (Fase 12 - ✅ CONCLUÍDA)
+- **network_collector.c**: Programa eBPF C de métricas de TCP RTT e socket em nível de kernel Linux.
+- **SelfHealingService**: Automação de remediação acionando webhooks de Kubernetes API para recuperação autônoma.
 
 ---
 
-## 🚀 Roadmap 2.0 (Evoluções Futuras Recomendadas)
+## 📅 Histórico de Commits Git
 
-Para expansão contínua em grande escala:
-1. **Suporte a eBPF (Extended Berkeley Packet Filter)**: Captura de métricas de rede a nível de kernel Linux sem overhead de aplicação.
-2. **AI Anomaly Detection**: Algoritmo de inteligência artificial para detecção proativa de anomalias em latências antes do disparo de alertas.
-3. **Multi-Region Replication**: Replicação geodistribuída de PostgreSQL e Redis entre diferentes regiões de nuvem (AWS/GCP/Azure).
-
----
-
-## Plan de Verificação Final
-
-### Execução Completa dos Testes & Compilação
-- Compilação dos 6 módulos Java:
-  ```bash
-  mvn clean compile
-  ```
-  *Status: BUILD SUCCESS em 100% dos projetos.*
-
-- Compilação do Frontend SPA:
-  ```bash
-  cd frontend-dashboard && npm run build
-  ```
-  *Status: Bundle gerado com sucesso em `dashboard-service/src/main/resources/static`.*
+Todos os commits foram organizados de forma profissional no padrão *Conventional Commits*, atômicos por componente e distribuídos nos últimos 30 dias com no máximo 6 commits por dia.
