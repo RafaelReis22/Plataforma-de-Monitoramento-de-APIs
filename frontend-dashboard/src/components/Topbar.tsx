@@ -8,6 +8,7 @@ import {
   Radio, 
   Layers, 
   GitBranch,
+  Network,
   RefreshCw, 
   User, 
   Lock, 
@@ -98,6 +99,13 @@ export const Topbar: React.FC<TopbarProps> = ({
           onClick={() => setActiveTab('traces')}
         >
           <GitBranch size={15} /> Traces & Logs
+        </button>
+
+        <button
+          className={`nav-tab ${activeTab === 'service-map' ? 'active' : ''}`}
+          onClick={() => setActiveTab('service-map')}
+        >
+          <Network size={15} /> Service Map
         </button>
 
         <button

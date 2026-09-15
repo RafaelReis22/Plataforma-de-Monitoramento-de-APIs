@@ -8,6 +8,7 @@ import { AlertsView } from './views/AlertsView';
 import { SyntheticView } from './views/SyntheticView';
 import { ApiKeysView } from './views/ApiKeysView';
 import { TracesLogsView } from './views/TracesLogsView';
+import { ServiceMapView } from './views/ServiceMapView';
 import { DesignSystemView } from './views/DesignSystemView';
 import { HardwareMetrics, ApiHealthMetrics, JvmMetrics, UserProfile } from './types/telemetry';
 
@@ -85,6 +86,7 @@ export function App() {
         {activeTab === 'synthetic' && <SyntheticView data={syntheticData} />}
         {activeTab === 'api-keys' && <ApiKeysView />}
         {activeTab === 'traces' && <TracesLogsView />}
+        {activeTab === 'service-map' && <ServiceMapView />}
         {activeTab === 'design-system' && <DesignSystemView />}
       </main>
 
