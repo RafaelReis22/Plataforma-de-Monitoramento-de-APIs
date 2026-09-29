@@ -20,8 +20,11 @@ public class WebhookNotificationService {
     @Value("${webhook.discord.url:}")
     private String discordWebhookUrl;
 
-    @Value("${webhook.slack.url:}")
-    private String slackWebhookUrl;
+    @Value("${webhook.telegram.url:}")
+    private String telegramWebhookUrl;
+
+    @Value("${webhook.telegram.chat-id:}")
+    private String telegramChatId;
 
     @Async
     public void sendAnomalyAlert(String method, String uri, String status, long durationMillis) {
@@ -32,12 +35,12 @@ public class WebhookNotificationService {
             sendDiscordAlert(message);
         }
 
-        if (slackWebhookUrl != null && !slackWebhookUrl.isEmpty()) {
-            sendSlackAlert(message);
+        if (telegramWebhookUrl != null && !telegramWebhookUrl.isEmpty() && telegramChatId != null) {
+            sendTelegramAlert(message);
         }
         
         if ((discordWebhookUrl == null || discordWebhookUrl.isEmpty()) && 
-            (slackWebhookUrl == null || slackWebhookUrl.isEmpty())) {
+            (telegramWebhookUrl == null || telegramWebhookUrl.isEmpty())) {
             log.warn("Anomalia detectada, mas nenhum webhook configurado. {}", message);
         }
     }
@@ -53,14 +56,15 @@ public class WebhookNotificationService {
         }
     }
 
-    private void sendSlackAlert(String message) {
+    private void sendTelegramAlert(String message) {
         try {
             Map<String, String> body = new HashMap<>();
+            body.put("chat_id", telegramChatId);
             body.put("text", message);
-            restTemplate.postForEntity(slackWebhookUrl, body, String.class);
-            log.info("Alerta enviado para o Slack com sucesso.");
+            restTemplate.postForEntity(telegramWebhookUrl, body, String.class);
+            log.info("Alerta enviado para o Telegram com sucesso.");
         } catch (Exception e) {
-            log.error("Erro ao enviar alerta para o Slack", e);
+            log.error("Erro ao enviar alerta para o Telegram", e);
         }
     }
 }
