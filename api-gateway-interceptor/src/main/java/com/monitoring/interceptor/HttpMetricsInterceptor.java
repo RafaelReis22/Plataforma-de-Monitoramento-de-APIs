@@ -1,5 +1,6 @@
 package com.monitoring.interceptor;
 
+import com.monitoring.interceptor.webhook.WebhookNotificationService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,6 +19,7 @@ public class HttpMetricsInterceptor implements HandlerInterceptor {
 
     private static final String START_TIME_ATTR = "request.startTime";
     private final MeterRegistry meterRegistry;
+    private final WebhookNotificationService webhookNotificationService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
@@ -79,6 +81,11 @@ public class HttpMetricsInterceptor implements HandlerInterceptor {
                 "uri", uri,
                 "status", status
             ).increment();
+        }
+
+        long durationMillis = TimeUnit.NANOSECONDS.toMillis(durationNanos);
+        if (response.getStatus() >= 500 || durationMillis > 2000) {
+            webhookNotificationService.sendAnomalyAlert(method, uri, status, durationMillis);
         }
 
         org.slf4j.MDC.clear();
