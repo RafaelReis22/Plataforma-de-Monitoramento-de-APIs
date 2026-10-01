@@ -39,6 +39,15 @@ Plataforma completa de monitoramento de APIs com métricas de hardware, análise
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Alertas em Tempo Real (Webhook)
+O `api-interceptor` suporta o envio automático de alertas para anomalias HTTP (erros 5xx ou latência > 2000ms).
+Para ativar as notificações via **Telegram**, configure as variáveis de ambiente antes de iniciar o projeto:
+```bash
+export TELEGRAM_WEBHOOK_URL="https://api.telegram.org/bot<SEU_TOKEN>/sendMessage"
+export TELEGRAM_CHAT_ID="<SEU_CHAT_ID>"
+```
+*(Também é possível usar o Discord setando `DISCORD_WEBHOOK_URL`)*.
+
 ## Pré-requisitos
 
 - **Java 21** (OpenJDK ou Temurin)

@@ -31,3 +31,20 @@ webhook:
     chat-id: ${TELEGRAM_CHAT_ID:}
   discord:
     url: ${DISCORD_WEBHOOK_URL:}
+
+resilience4j.circuitbreaker:
+  instances:
+    webhook:
+      registerHealthIndicator: true
+      slidingWindowSize: 5
+      minimumNumberOfCalls: 3
+      permittedNumberOfCallsInHalfOpenState: 3
+      automaticTransitionFromOpenToHalfOpenEnabled: true
+      waitDurationInOpenState: 10s
+      failureRateThreshold: 50
+
+resilience4j.retry:
+  instances:
+    webhook:
+      maxAttempts: 3
+      waitDuration: 2s

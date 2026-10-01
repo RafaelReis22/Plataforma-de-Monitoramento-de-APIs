@@ -29,8 +29,13 @@ class ApiControllerTest {
         }
 
         @Bean
-        HttpMetricsInterceptor httpMetricsInterceptor(MeterRegistry mr) {
-            return new HttpMetricsInterceptor(mr);
+        com.monitoring.interceptor.webhook.WebhookNotificationService webhookNotificationService() {
+            return org.mockito.Mockito.mock(com.monitoring.interceptor.webhook.WebhookNotificationService.class);
+        }
+
+        @Bean
+        HttpMetricsInterceptor httpMetricsInterceptor(MeterRegistry mr, com.monitoring.interceptor.webhook.WebhookNotificationService webhookNotificationService) {
+            return new HttpMetricsInterceptor(mr, webhookNotificationService);
         }
 
         @Bean

@@ -12,16 +12,21 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.monitoring.interceptor.webhook.WebhookNotificationService;
+import static org.mockito.Mockito.*;
+
 @DisplayName("HttpMetricsInterceptor — testes unitários")
 class HttpMetricsInterceptorTest {
 
     private MeterRegistry meterRegistry;
+    private WebhookNotificationService webhookNotificationService;
     private HttpMetricsInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        interceptor = new HttpMetricsInterceptor(meterRegistry);
+        webhookNotificationService = mock(WebhookNotificationService.class);
+        interceptor = new HttpMetricsInterceptor(meterRegistry, webhookNotificationService);
     }
 
     @Test
@@ -125,5 +130,51 @@ class HttpMetricsInterceptorTest {
             .tag("outcome", outcomeEsperado)
             .timer();
         assertThat(timer).isNotNull();
+    }
+
+    @Test
+    @DisplayName("afterCompletion deve chamar webhookNotificationService quando status >= 500")
+    void afterCompletion_status500_deveChamarWebhook() {
+        var request  = new MockHttpServletRequest("POST", "/api/data");
+        var response = new MockHttpServletResponse();
+        response.setStatus(502);
+        request.setAttribute("request.startTime", System.nanoTime() - 1_000_000L); // 1ms latência
+
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        verify(webhookNotificationService, times(1))
+            .sendAnomalyAlert(eq("POST"), eq("/api/data"), eq("502"), anyLong());
+    }
+
+    @Test
+    @DisplayName("afterCompletion deve chamar webhookNotificationService quando latencia > 2000ms")
+    void afterCompletion_latenciaAlta_deveChamarWebhook() {
+        var request  = new MockHttpServletRequest("GET", "/api/slow");
+        var response = new MockHttpServletResponse();
+        response.setStatus(200);
+        
+        long tresSegundosEmNanos = 3_000_000_000L;
+        request.setAttribute("request.startTime", System.nanoTime() - tresSegundosEmNanos); 
+
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        verify(webhookNotificationService, times(1))
+            .sendAnomalyAlert(eq("GET"), eq("/api/slow"), eq("200"), anyLong());
+    }
+
+    @Test
+    @DisplayName("afterCompletion NAO deve chamar webhook se status < 500 e latencia <= 2000ms")
+    void afterCompletion_sucessoENormal_naoDeveChamarWebhook() {
+        var request  = new MockHttpServletRequest("GET", "/api/fast");
+        var response = new MockHttpServletResponse();
+        response.setStatus(200);
+        
+        long umSegundoEmNanos = 1_000_000_000L;
+        request.setAttribute("request.startTime", System.nanoTime() - umSegundoEmNanos); 
+
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        verify(webhookNotificationService, never())
+            .sendAnomalyAlert(anyString(), anyString(), anyString(), anyLong());
     }
 }
